@@ -41,6 +41,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsDemoMode(isDemo);
       
       if (isDemo) {
+        // Clear any existing session for demo mode
+        supabase.auth.signOut().catch(() => {/* ignore errors */});
+        
         // Set demo profile data with proper UUIDs
         const demoOrgId = '00000000-0000-0000-0000-000000000001';
         const demoUserId = '00000000-0000-0000-0000-000000000002';
