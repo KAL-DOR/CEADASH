@@ -1,7 +1,3 @@
--- ==========================================
--- COMPLETE DATABASE RESET - FRESH START
--- This drops everything and recreates it cleanly
--- ==========================================
 
 -- Step 1: Drop all existing tables (CASCADE removes dependencies)
 DROP TABLE IF EXISTS public.activities CASCADE;
