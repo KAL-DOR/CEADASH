@@ -1,9 +1,3 @@
--- Create a real authenticated demo user in Supabase Auth
--- This is MUCH simpler than dealing with anon policies
-
--- Step 1: Insert into auth.users (Supabase's auth table)
--- Note: You'll need to run this with proper permissions
--- The password will be: demo123
 
 INSERT INTO auth.users (
   id,
