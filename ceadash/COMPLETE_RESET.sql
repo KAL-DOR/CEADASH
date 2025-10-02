@@ -1,6 +1,4 @@
 
--- Step 1: Drop all existing tables (CASCADE removes dependencies)
-DROP TABLE IF EXISTS public.activities CASCADE;
 DROP TABLE IF EXISTS public.transcriptions CASCADE;
 DROP TABLE IF EXISTS public.scheduled_calls CASCADE;
 DROP TABLE IF EXISTS public.processes CASCADE;
