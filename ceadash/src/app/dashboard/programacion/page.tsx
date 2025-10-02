@@ -220,21 +220,22 @@ export default function ProgramacionPage() {
 
       const ccEmails: string[] = [];
 
-      // Send email to contact via API route (server-side)
+      // Send email to contact via Gmail (EmailJS)
       try {
-        const emailResponse = await fetch('/api/send-email', {
+        const emailResponse = await fetch('/api/send-email-gmail', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             to: selectedContact.email,
-            contactName: selectedContact.name,
-            scheduledDate: newCall.scheduledDate.toISOString(),
-            adminName: profile?.full_name || "Equipo CEA",
-            companyName: "CEA Dashboard",
-            botConnectionUrl: botConnectionUrl,
-            processType: newCall.processType,
-            duration: newCall.duration,
-            ccEmails: ccEmails,
+            scheduledCall: {
+              id: scheduledCallData.id || 'new',
+              contact_name: selectedContact.name,
+              contact_email: selectedContact.email,
+              scheduled_date: newCall.scheduledDate.toISOString(),
+              notes: newCall.notes,
+              bot_connection_url: botConnectionUrl,
+            },
+            additionalCCs: ccEmails,
           }),
         });
 
@@ -242,7 +243,7 @@ export default function ProgramacionPage() {
 
         notifications.show({
           title: "¡Éxito!",
-          message: `Llamada programada${emailResult.success ? ' y email enviado' : ''} a ${selectedContact.name}`,
+          message: `Llamada programada${emailResult.success ? ' y email enviado desde tu Gmail' : ''} a ${selectedContact.name}`,
           color: "green",
         });
       } catch (emailError) {
