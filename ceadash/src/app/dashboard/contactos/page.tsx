@@ -115,6 +115,7 @@ export default function ContactosPage() {
         name: newContact.name,
         email: newContact.email,
         phone: newContact.phone || null,
+        company: newContact.company || null,
         notes: newContact.notes || null,
         status: 'active' as const,
         created_by: profile?.id,
