@@ -198,26 +198,48 @@ export default function ProcesosPage() {
   return (
     <Stack gap="xl">
       {/* Header */}
-      <Flex justify="space-between" align="center">
-        <div>
-          <Title order={1}>Procesos</Title>
-          <Text c="dimmed">Gestiona y visualiza todos los procesos mapeados con IA</Text>
-        </div>
-        <Group>
-          <Button
-            leftSection={<IconUpload size={16} />}
-            variant="light"
-          >
-            Importar Transcripción
-          </Button>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => setOpened(true)}
-          >
-            Nuevo Proceso
-          </Button>
-        </Group>
-      </Flex>
+      <Stack gap="sm">
+        <Flex justify="space-between" align={{ base: "flex-start", sm: "center" }} direction={{ base: "column", sm: "row" }} gap="md">
+          <div>
+            <Title order={1}>Procesos</Title>
+            <Text c="dimmed">Gestiona y visualiza todos los procesos mapeados con IA</Text>
+          </div>
+          <Group gap="sm" hiddenFrom="sm" style={{ width: '100%' }}>
+            <Button
+              leftSection={<IconUpload size={16} />}
+              variant="light"
+              size="md"
+              fullWidth
+            >
+              Importar Transcripción
+            </Button>
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setOpened(true)}
+              size="md"
+              fullWidth
+            >
+              Nuevo Proceso
+            </Button>
+          </Group>
+          <Group gap="sm" visibleFrom="sm">
+            <Button
+              leftSection={<IconUpload size={16} />}
+              variant="light"
+              size="md"
+            >
+              Importar Transcripción
+            </Button>
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setOpened(true)}
+              size="md"
+            >
+              Nuevo Proceso
+            </Button>
+          </Group>
+        </Flex>
+      </Stack>
 
       {/* Stats */}
       <ProcessStats
@@ -238,7 +260,7 @@ export default function ProcesosPage() {
       />
 
       {/* Process Grid */}
-      <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="lg">
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing={{ base: "md", md: "lg" }}>
         {filteredProcesses.map((process) => (
           <ProcessCard 
             key={process.id} 

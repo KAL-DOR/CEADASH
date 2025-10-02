@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth/context";
 import {
   AppShell,
   Text,
@@ -14,6 +15,7 @@ import {
   Avatar,
   Menu,
   Divider,
+  Badge,
 } from "@mantine/core";
 import {
   IconGitBranch,
@@ -35,6 +37,27 @@ export default function DashboardLayout({
   const [opened, setOpened] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { user, profile, organization, loading, isDemoMode, signOut } = useAuth();
+
+  // Redirect to home if not authenticated and not in demo mode
+  if (!loading && !user && !isDemoMode) {
+    router.push('/');
+    return null;
+  }
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <Text>Cargando...</Text>
+      </div>
+    );
+  }
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/');
+  };
 
   const navItems = [
     {
@@ -72,16 +95,16 @@ export default function DashboardLayout({
   return (
     <AppShell
       navbar={{
-        width: 280,
+        width: { base: 280, md: 300 },
         breakpoint: "sm",
         collapsed: { mobile: !opened },
       }}
       header={{ height: 60 }}
-      padding="md"
+      padding={{ base: "sm", md: "md" }}
     >
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Group>
+        <Group h="100%" px={{ base: "sm", md: "md" }} justify="space-between">
+          <Group gap="sm">
             <ActionIcon
               variant="subtle"
               onClick={() => setOpened(!opened)}
@@ -94,26 +117,45 @@ export default function DashboardLayout({
                 <IconGitBranch size={20} />
               </ThemeIcon>
               <Text size="lg" fw={700}>Panel CEA</Text>
+              {isDemoMode && (
+                <Badge color="orange" variant="light" size="sm">
+                  DEMO
+                </Badge>
+              )}
             </Group>
           </Group>
 
-          <Menu shadow="md" width={200}>
+          <Menu shadow="md" width={250}>
             <Menu.Target>
               <ActionIcon variant="subtle" size="lg">
-                <Avatar size="sm" color="blue">U</Avatar>
+                <Avatar size="sm" color="blue" src={profile?.avatar_url}>
+                  {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                </Avatar>
               </ActionIcon>
             </Menu.Target>
 
             <Menu.Dropdown>
-              <Menu.Label>Mi Cuenta</Menu.Label>
-              <Menu.Item leftSection={<IconSettings size={14} />}>
+              <Menu.Label>
+                <div>
+                  <Text size="sm" fw={500}>{profile?.full_name || 'Usuario'}</Text>
+                  <Text size="xs" c="dimmed">{user?.email}</Text>
+                  {organization && (
+                    <Text size="xs" c="dimmed">{organization.name}</Text>
+                  )}
+                </div>
+              </Menu.Label>
+              <Menu.Divider />
+              <Menu.Item 
+                leftSection={<IconSettings size={14} />}
+                onClick={() => router.push('/dashboard/configuracion')}
+              >
                 Configuración
               </Menu.Item>
               <Menu.Divider />
               <Menu.Item
                 leftSection={<IconLogout size={14} />}
                 color="red"
-                onClick={() => router.push("/")}
+                onClick={handleSignOut}
               >
                 Cerrar Sesión
               </Menu.Item>

@@ -12,7 +12,7 @@ export function QuickActions({ onMapProcess, onScheduleCall, onViewDocs }: Quick
     <Card shadow="sm" padding="lg" radius="md" withBorder>
       <Stack gap="md">
         <Title order={3}>Acciones Rápidas</Title>
-        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
+        <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing={{ base: "sm", md: "md" }}>
           <Button
             leftSection={<IconBrain size={16} />}
             variant="light"

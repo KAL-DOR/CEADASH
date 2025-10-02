@@ -112,7 +112,7 @@ export default function ContactosPage() {
   return (
     <Stack gap="xl">
       {/* Header */}
-      <Flex justify="space-between" align="center">
+      <Flex justify="space-between" align={{ base: "flex-start", sm: "center" }} direction={{ base: "column", sm: "row" }} gap="md">
         <div>
           <Title order={1}>Contactos</Title>
           <Text c="dimmed">Gestiona tus contactos y programa llamadas con ElevenLabs</Text>
@@ -120,13 +120,24 @@ export default function ContactosPage() {
         <Button
           leftSection={<IconPlus size={16} />}
           onClick={() => setOpened(true)}
+          size="md"
+          hiddenFrom="sm"
+          fullWidth
+        >
+          Agregar Contacto
+        </Button>
+        <Button
+          leftSection={<IconPlus size={16} />}
+          onClick={() => setOpened(true)}
+          size="md"
+          visibleFrom="sm"
         >
           Agregar Contacto
         </Button>
       </Flex>
 
       {/* Stats Cards */}
-      <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg">
+      <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing={{ base: "md", md: "lg" }}>
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Stack gap="xs">
             <Text size="sm" c="dimmed">Total Contactos</Text>

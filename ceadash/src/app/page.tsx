@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth/context";
 import {
   Container,
   Title,
@@ -38,16 +39,40 @@ import {
   IconBolt,
   IconPlayerPlay,
 } from "@tabler/icons-react";
+import { AuthForms } from "@/components/auth/auth-forms";
 
 export default function HomePage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleBypassAuth = async () => {
     setLoading(true);
+    
+    // Set demo mode cookie
+    document.cookie = 'demo-mode=true; max-age=86400; path=/'; // 24 hours
+    
+    // Small delay for UX
     await new Promise(resolve => setTimeout(resolve, 1000));
-    router.push("/dashboard");
+    
+    // Navigate to dashboard with demo parameter
+    router.push("/dashboard?demo=true");
   };
+
+  // Redirect if user is already authenticated
+  if (user && !authLoading) {
+    router.push("/dashboard");
+    return null;
+  }
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <Container size="xl" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <Text>Cargando...</Text>
+      </Container>
+    );
+  }
 
   const features = [
     {
@@ -82,34 +107,35 @@ export default function HomePage() {
       <Paper shadow="sm" p="md" mb={0} style={{ borderBottom: '1px solid #e9ecef' }}>
         <Container size="xl">
           <Flex justify="space-between" align="center">
-            <Group>
+            <Group gap="sm">
               <ThemeIcon size="lg" variant="gradient" gradient={{ from: 'blue', to: 'purple' }}>
                 <IconGitBranch size={20} />
               </ThemeIcon>
-              <Title order={2} fw={700}>Panel CEA</Title>
+              <Title order={2} fw={700} size="xl">Panel CEA</Title>
             </Group>
-            <Group>
+            <Group gap="xs" visibleFrom="sm">
               <Anchor c="dimmed" size="sm">Características</Anchor>
               <Anchor c="dimmed" size="sm">Precios</Anchor>
               <Anchor c="dimmed" size="sm">Documentación</Anchor>
-              <Button
-                leftSection={<IconPlayerPlay size={16} />}
-                variant="gradient"
-                gradient={{ from: 'blue', to: 'purple' }}
-                onClick={handleBypassAuth}
-                loading={loading}
-              >
-                Demo
-              </Button>
             </Group>
+            <Button
+              leftSection={<IconPlayerPlay size={16} />}
+              variant="gradient"
+              gradient={{ from: 'blue', to: 'purple' }}
+              onClick={handleBypassAuth}
+              loading={loading}
+              size="md"
+            >
+              Demo
+            </Button>
           </Flex>
         </Container>
       </Paper>
 
       {/* Hero Section */}
-      <Box style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }} py={80}>
+      <Box style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }} py={{ base: 40, md: 80 }}>
         <Container size="xl">
-          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={50}>
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing={{ base: 30, md: 50 }}>
             <Stack gap="xl">
               <Badge
                 leftSection={<IconSparkles size={16} />}
@@ -117,19 +143,19 @@ export default function HomePage() {
                 color="white"
                 size="lg"
               >
-                AI-Powered Process Optimization
+                Optimización de Procesos con IA
               </Badge>
               
-              <Title order={1} size={48} fw={900} lh={1.2}>
+              <Title order={1} size="h1" fw={900} lh={1.2}>
                 Transforma tus Flujos de Trabajo con IA
               </Title>
               
               <Text size="xl" c="gray.2">
-                Convierte conversaciones de ElevenLabs en diagramas de procesos inteligentes. 
+                Convierte conversaciones de ElevenLabs en diagramas de procesos inteligentes.
                 Programa sin problemas, gestiona documentación y optimiza flujos de trabajo.
               </Text>
               
-              <Group>
+              <Group gap="md">
                 <Button
                   size="lg"
                   variant="white"
@@ -137,96 +163,94 @@ export default function HomePage() {
                   rightSection={<IconArrowRight size={20} />}
                   onClick={handleBypassAuth}
                   loading={loading}
+                  style={{ flexGrow: 1 }}
+                  hiddenFrom="sm"
                 >
-                  Get Started
+                  {loading ? "Entrando al Demo..." : "Empezar Ahora"}
                 </Button>
-                <Button size="lg" variant="outline" color="white">
-                  View Demo
+                <Button
+                  size="lg"
+                  variant="white"
+                  color="dark"
+                  rightSection={<IconArrowRight size={20} />}
+                  onClick={handleBypassAuth}
+                  loading={loading}
+                  visibleFrom="sm"
+                >
+                  {loading ? "Entrando al Demo..." : "Empezar Ahora"}
+                </Button>
+                <Button 
+                  size="lg"
+                  variant="outline" 
+                  color="white"
+                  style={{ flexGrow: 1 }}
+                  hiddenFrom="sm"
+                >
+                  Saber Más
+                </Button>
+                <Button 
+                  size="lg"
+                  variant="outline" 
+                  color="white"
+                  visibleFrom="sm"
+                >
+                  Saber Más
                 </Button>
               </Group>
               
-              <Group gap="xl">
+              <Stack gap="xs" hiddenFrom="sm">
                 <Group gap="xs">
                   <IconCheck size={16} color="#4ade80" />
-                  <Text size="sm">No credit card required</Text>
+                  <Text size="sm">Sin tarjeta de crédito</Text>
                 </Group>
                 <Group gap="xs">
                   <IconCheck size={16} color="#4ade80" />
-                  <Text size="sm">Free trial</Text>
+                  <Text size="sm">Prueba gratuita</Text>
                 </Group>
                 <Group gap="xs">
                   <IconStar size={16} color="#fbbf24" />
-                  <Text size="sm">5-star rated</Text>
+                  <Text size="sm">5 estrellas</Text>
+                </Group>
+              </Stack>
+              
+              <Group gap="xl" visibleFrom="sm">
+                <Group gap="xs">
+                  <IconCheck size={16} color="#4ade80" />
+                  <Text size="sm">Sin tarjeta de crédito</Text>
+                </Group>
+                <Group gap="xs">
+                  <IconCheck size={16} color="#4ade80" />
+                  <Text size="sm">Prueba gratuita</Text>
+                </Group>
+                <Group gap="xs">
+                  <IconStar size={16} color="#fbbf24" />
+                  <Text size="sm">5 estrellas</Text>
                 </Group>
               </Group>
             </Stack>
 
-            {/* Auth Card */}
+            {/* Auth Forms */}
             <Center>
-              <Card shadow="xl" radius="md" p="xl" w={400} bg="white">
-                <Stack gap="md">
-                  <Title order={3} ta="center" c="dark">Welcome to CEA Dashboard</Title>
-                  <Text ta="center" c="dimmed" size="sm">
-                    Sign in to your account or create a new one
-                  </Text>
+              <div style={{ width: '100%', maxWidth: 400 }}>
+                <AuthForms />
+                
+                <Divider label="O continúa con" labelPosition="center" my="md" />
 
-                  <Tabs defaultValue="login">
-                    <Tabs.List grow>
-                      <Tabs.Tab value="login">Login</Tabs.Tab>
-                      <Tabs.Tab value="register">Register</Tabs.Tab>
-                    </Tabs.List>
-
-                    <Tabs.Panel value="login" pt="md">
-                      <Stack gap="md">
-                        <TextInput
-                          label="Email"
-                          placeholder="your@email.com"
-                          required
-                        />
-                        <PasswordInput
-                          label="Password"
-                          placeholder="Your password"
-                          required
-                        />
-                        <Button fullWidth variant="gradient" gradient={{ from: 'blue', to: 'purple' }}>
-                          Sign In
-                        </Button>
-                      </Stack>
-                    </Tabs.Panel>
-
-                    <Tabs.Panel value="register" pt="md">
-                      <Stack gap="md">
-                        <SimpleGrid cols={2}>
-                          <TextInput label="First name" placeholder="John" />
-                          <TextInput label="Last name" placeholder="Doe" />
-                        </SimpleGrid>
-                        <TextInput label="Email" placeholder="your@email.com" />
-                        <TextInput label="Company" placeholder="Acme Inc." />
-                        <PasswordInput label="Password" placeholder="Create password" />
-                        <Button fullWidth variant="gradient" gradient={{ from: 'blue', to: 'purple' }}>
-                          Create Account
-                        </Button>
-                      </Stack>
-                    </Tabs.Panel>
-                  </Tabs>
-
-                  <Divider label="Or continue with" labelPosition="center" />
-
-                  <Button
-                    variant="outline"
-                    leftSection={<IconBolt size={16} />}
-                    onClick={handleBypassAuth}
-                    loading={loading}
-                    fullWidth
-                  >
-                    {loading ? "Entering Demo..." : "Try Demo Mode"}
-                  </Button>
-                  
-                  <Text ta="center" size="xs" c="dimmed">
-                    No registration required • Full feature access
-                  </Text>
-                </Stack>
-              </Card>
+                <Button
+                  variant="outline"
+                  leftSection={<IconBolt size={16} />}
+                  onClick={handleBypassAuth}
+                  loading={loading}
+                  fullWidth
+                  size="lg"
+                >
+                  {loading ? "Entrando al Demo..." : "Probar Modo Demo"}
+                </Button>
+                
+                <Text ta="center" size="xs" c="dimmed" mt="sm">
+                  Sin registro requerido • Acceso completo a funcionalidades
+                </Text>
+              </div>
             </Center>
           </SimpleGrid>
         </Container>

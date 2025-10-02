@@ -84,14 +84,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg">
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing={{ base: "md", md: "lg" }}>
         {stats.map((stat, index) => (
           <StatsCard key={index} {...stat} />
         ))}
       </SimpleGrid>
 
       {/* Charts and Activity */}
-      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+      <SimpleGrid cols={{ base: 1, lg: 2 }} spacing={{ base: "md", md: "lg" }}>
         <ProcessEfficiencyChart />
         <RecentActivity />
       </SimpleGrid>

@@ -1,0 +1,60 @@
+
+> ceadash@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.4 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 52ms
+ ✓ Compiled successfully in 4.3s
+   Linting and checking validity of types ...
+
+Failed to compile.
+
+./src/app/api/webhook/elevenlabs/route.ts
+14:31  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+81:44  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+106:42  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+120:18  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+137:51  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+189:48  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+189:68  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+189:88  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/app/dashboard/configuracion/page.tsx
+33:3  Warning: 'IconPalette' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/dashboard/contactos/page.tsx
+25:3  Warning: 'IconMail' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/dashboard/programacion/page.tsx
+29:3  Warning: 'IconMail' is defined but never used.  @typescript-eslint/no-unused-vars
+31:3  Warning: 'IconClock' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/page.tsx
+18:3  Warning: 'TextInput' is defined but never used.  @typescript-eslint/no-unused-vars
+19:3  Warning: 'PasswordInput' is defined but never used.  @typescript-eslint/no-unused-vars
+20:3  Warning: 'Tabs' is defined but never used.  @typescript-eslint/no-unused-vars
+24:3  Warning: 'List' is defined but never used.  @typescript-eslint/no-unused-vars
+29:3  Warning: 'IconRocket' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/auth/auth-forms.tsx
+60:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+104:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/components/procesos/process-diagram.tsx
+62:9  Warning: 'getNodeLabel' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/auth/context.tsx
+18:65  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+19:109  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+21:66  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+98:6  Warning: React Hook useEffect has a missing dependency: 'isDemoMode'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+141:21  Warning: 'authData' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/elevenlabs/agent-config.ts
+40:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+259:13  Warning: 'agentData' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
