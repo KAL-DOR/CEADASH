@@ -142,6 +142,18 @@ export default function ContactosPage() {
 
         if (error) throw error;
 
+        // Create activity entry
+        await supabase
+          .from('activities')
+          .insert({
+            organization_id: profile?.organization_id,
+            user_id: profile?.id,
+            activity_type: 'contact_added',
+            title: `Contacto agregado: ${newContact.name}`,
+            description: `${newContact.email}`,
+            metadata: { contact_name: newContact.name, contact_email: newContact.email }
+          });
+
         notifications.show({
           title: "¡Éxito!",
           message: "Contacto agregado correctamente",

@@ -126,6 +126,18 @@ export default function ProcesosPage() {
 
       if (error) throw error;
 
+      // Create activity entry
+      await supabase
+        .from('activities')
+        .insert({
+          organization_id: profile?.organization_id,
+          user_id: profile?.id,
+          activity_type: 'process_created',
+          title: `Proceso creado: ${newProcess.name}`,
+          description: newProcess.description || undefined,
+          metadata: { process_name: newProcess.name, status: newProcess.status }
+        });
+
       notifications.show({
         title: "¡Éxito!",
         message: "Proceso creado correctamente",

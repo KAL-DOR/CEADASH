@@ -259,6 +259,22 @@ export default function ProgramacionPage() {
             .eq('id', scheduledCall.id);
         }
 
+        // Create activity entry
+        await supabase
+          .from('activities')
+          .insert({
+            organization_id: profile?.organization_id,
+            user_id: profile?.id,
+            activity_type: 'call_scheduled',
+            title: `Llamada programada con ${selectedContact.name}`,
+            description: `${newCall.processType} - ${new Date(newCall.scheduledDate).toLocaleDateString('es-ES')}`,
+            metadata: { 
+              scheduled_call_id: scheduledCall.id,
+              contact_id: newCall.contactId,
+              process_type: newCall.processType
+            }
+          });
+
         notifications.show({
           title: "¡Éxito!",
           message: `Llamada programada y email enviado a ${selectedContact.name}`,

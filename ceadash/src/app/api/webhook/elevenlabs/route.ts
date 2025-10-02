@@ -82,7 +82,7 @@ async function handleCallStarted(supabase: Awaited<ReturnType<typeof createClien
   // Find the scheduled call by bot connection URL or call ID
   const { data: scheduledCall, error } = await supabase
     .from('scheduled_calls')
-    .select('*')
+    .select('*, contacts(name)')
     .or(`bot_connection_url.ilike.%${payload.call_id}%,id.eq.${payload.call_id}`)
     .single();
 
@@ -100,6 +100,18 @@ async function handleCallStarted(supabase: Awaited<ReturnType<typeof createClien
     })
     .eq('id', scheduledCall.id);
 
+  // Create activity entry
+  const contactName = (scheduledCall.contacts as Record<string, unknown>)?.name || 'Contacto';
+  await supabase
+    .from('activities')
+    .insert({
+      organization_id: scheduledCall.organization_id,
+      activity_type: 'call_started',
+      title: `Llamada iniciada con ${contactName}`,
+      description: `La llamada ha comenzado`,
+      metadata: { call_id: payload.call_id, scheduled_call_id: scheduledCall.id }
+    });
+
   console.log('Call started for scheduled call:', scheduledCall.id);
 }
 
@@ -107,7 +119,7 @@ async function handleCallEnded(supabase: Awaited<ReturnType<typeof createClient>
   // Find the scheduled call
   const { data: scheduledCall, error } = await supabase
     .from('scheduled_calls')
-    .select('*')
+    .select('*, contacts(name)')
     .or(`bot_connection_url.ilike.%${payload.call_id}%,id.eq.${payload.call_id}`)
     .single();
 
@@ -130,6 +142,29 @@ async function handleCallEnded(supabase: Awaited<ReturnType<typeof createClient>
     .from('scheduled_calls')
     .update(updates)
     .eq('id', scheduledCall.id);
+
+  // Create activity entry
+  const contactName = (scheduledCall.contacts as Record<string, unknown>)?.name || 'Contacto';
+  const activityType = updates.status === 'completed' ? 'call_completed' : 'call_cancelled';
+  const title = updates.status === 'completed' 
+    ? `Llamada completada con ${contactName}`
+    : `Llamada cancelada con ${contactName}`;
+  
+  await supabase
+    .from('activities')
+    .insert({
+      organization_id: scheduledCall.organization_id,
+      activity_type: activityType,
+      title,
+      description: updates.duration_minutes 
+        ? `Duración: ${updates.duration_minutes} minutos`
+        : undefined,
+      metadata: { 
+        call_id: payload.call_id, 
+        scheduled_call_id: scheduledCall.id,
+        duration_minutes: updates.duration_minutes
+      }
+    });
 
   console.log('Call ended for scheduled call:', scheduledCall.id, 'Status:', updates.status);
 }
@@ -177,6 +212,28 @@ async function handleTranscriptionReady(supabase: Awaited<ReturnType<typeof crea
       updated_at: new Date().toISOString()
     })
     .eq('id', scheduledCall.id);
+
+  // Create activity entry
+  const { data: contact } = await supabase
+    .from('contacts')
+    .select('name')
+    .eq('id', scheduledCall.contact_id)
+    .single();
+  
+  const contactName = contact?.name || 'Contacto';
+  await supabase
+    .from('activities')
+    .insert({
+      organization_id: scheduledCall.organization_id,
+      activity_type: 'transcription_ready',
+      title: `Transcripción lista para ${contactName}`,
+      description: `La transcripción de la llamada está disponible para análisis`,
+      metadata: { 
+        call_id: payload.call_id, 
+        scheduled_call_id: scheduledCall.id,
+        transcription_id: transcription.id
+      }
+    });
 
   console.log('Transcription ready for call:', scheduledCall.id, 'Transcription ID:', transcription.id);
 
