@@ -5,18 +5,18 @@ interface ProcessFiltersProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   statusFilter: string;
-  onStatusChange: (status: string) => void;
+  onStatusFilterChange: (status: string) => void;
   sortBy: string;
-  onSortChange: (sort: string) => void;
+  onSortByChange: (sort: string) => void;
 }
 
 export function ProcessFilters({
   searchQuery,
   onSearchChange,
   statusFilter,
-  onStatusChange,
+  onStatusFilterChange,
   sortBy,
-  onSortChange,
+  onSortByChange,
 }: ProcessFiltersProps) {
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -31,24 +31,23 @@ export function ProcessFilters({
         <Select
           placeholder="Estado"
           value={statusFilter}
-          onChange={(value) => onStatusChange(value || "todos")}
+          onChange={(value) => onStatusFilterChange(value || "todos")}
           data={[
             { value: "todos", label: "Todos" },
-            { value: "completado", label: "Completados" },
-            { value: "en_progreso", label: "En Progreso" },
-            { value: "pendiente", label: "Pendientes" },
+            { value: "active", label: "Activos" },
+            { value: "draft", label: "Borradores" },
+            { value: "archived", label: "Archivados" },
           ]}
           w={150}
         />
         <Select
           placeholder="Ordenar por"
           value={sortBy}
-          onChange={(value) => onSortChange(value || "fecha")}
+          onChange={(value) => onSortByChange(value || "fecha")}
           data={[
             { value: "fecha", label: "Fecha" },
             { value: "nombre", label: "Nombre" },
             { value: "eficiencia", label: "Eficiencia" },
-            { value: "estado", label: "Estado" },
           ]}
           w={150}
         />

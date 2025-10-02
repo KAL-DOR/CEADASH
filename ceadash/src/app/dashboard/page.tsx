@@ -1,6 +1,7 @@
 "use client";
 
-import { Title, Text, Stack, SimpleGrid } from "@mantine/core";
+import { useState, useEffect } from "react";
+import { Title, Text, Stack, SimpleGrid, Loader, Center } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { notifications } from "@mantine/notifications";
 import {
@@ -9,6 +10,8 @@ import {
   IconUsers,
   IconTrendingUp,
 } from "@tabler/icons-react";
+import { useAuth } from "@/lib/auth/context";
+import { createClient } from "@/lib/supabase/client";
 
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { ProcessEfficiencyChart } from "@/components/dashboard/process-efficiency-chart";
@@ -17,34 +20,90 @@ import { QuickActions } from "@/components/dashboard/quick-actions";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const stats = [
+  const { profile } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalProcesses: 0,
+    scheduledCalls: 0,
+    totalContacts: 0,
+    avgEfficiency: 0,
+  });
+
+  useEffect(() => {
+    if (profile?.organization_id) {
+      loadStats();
+    }
+  }, [profile?.organization_id]);
+
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      const supabase = createClient();
+
+      // Load all stats in parallel
+      const [processesResult, callsResult, contactsResult] = await Promise.all([
+        supabase
+          .from('processes')
+          .select('efficiency_score')
+          .eq('organization_id', profile?.organization_id),
+        supabase
+          .from('scheduled_calls')
+          .select('id', { count: 'exact', head: true })
+          .eq('organization_id', profile?.organization_id)
+          .in('status', ['scheduled', 'in_progress']),
+        supabase
+          .from('contacts')
+          .select('id', { count: 'exact', head: true })
+          .eq('organization_id', profile?.organization_id)
+          .eq('status', 'active'),
+      ]);
+
+      const processes = processesResult.data || [];
+      const avgEfficiency = processes.length > 0
+        ? Math.round(processes.reduce((sum, p) => sum + (p.efficiency_score || 0), 0) / processes.length)
+        : 0;
+
+      setStats({
+        totalProcesses: processes.length,
+        scheduledCalls: callsResult.count || 0,
+        totalContacts: contactsResult.count || 0,
+        avgEfficiency,
+      });
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statsCards = [
     {
       title: "Procesos Totales",
-      value: "24",
+      value: stats.totalProcesses.toString(),
       icon: IconGitBranch,
       color: "blue",
-      change: "+12%",
+      change: "",
     },
     {
       title: "Llamadas Programadas",
-      value: "8",
+      value: stats.scheduledCalls.toString(),
       icon: IconCalendar,
       color: "green",
-      change: "+5%",
+      change: "",
     },
     {
-      title: "Usuarios Activos",
-      value: "156",
+      title: "Contactos Activos",
+      value: stats.totalContacts.toString(),
       icon: IconUsers,
       color: "purple",
-      change: "+18%",
+      change: "",
     },
     {
-      title: "Ganancia de Eficiencia",
-      value: "35%",
+      title: "Eficiencia Promedio",
+      value: `${stats.avgEfficiency}%`,
       icon: IconTrendingUp,
       color: "orange",
-      change: "+8%",
+      change: "",
     },
   ];
 
@@ -75,6 +134,17 @@ export default function DashboardPage() {
     });
   };
 
+  if (loading) {
+    return (
+      <Center style={{ minHeight: '50vh' }}>
+        <Stack align="center" gap="md">
+          <Loader size="lg" />
+          <Text c="dimmed">Cargando estadísticas...</Text>
+        </Stack>
+      </Center>
+    );
+  }
+
   return (
     <Stack gap="xl">
       {/* Header */}
@@ -85,7 +155,7 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing={{ base: "md", md: "lg" }}>
-        {stats.map((stat, index) => (
+        {statsCards.map((stat, index) => (
           <StatsCard key={index} {...stat} />
         ))}
       </SimpleGrid>

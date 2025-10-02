@@ -1,11 +1,11 @@
-import { Card, Stack, Group, Title, Text, Badge, Button, ActionIcon, Progress } from "@mantine/core";
-import { IconEye, IconEdit, IconDownload, IconShare, IconChartBar } from "@tabler/icons-react";
+import { Card, Stack, Group, Title, Text, Badge, Button, ActionIcon, Progress, Menu } from "@mantine/core";
+import { IconEye, IconEdit, IconDownload, IconShare, IconChartBar, IconDotsVertical, IconTrash, IconArchive, IconCheck } from "@tabler/icons-react";
 
 interface ProcessCardProps {
   id: string;
   name: string;
   description: string;
-  status: "completado" | "en_progreso" | "pendiente";
+  status: "draft" | "active" | "archived";
   efficiency: number;
   lastUpdated: string;
   transcriptionLength?: number;
@@ -15,6 +15,8 @@ interface ProcessCardProps {
   onShare?: (id: string) => void;
   onViewDiagram?: (id: string) => void;
   onViewImprovements?: (id: string) => void;
+  onDelete?: () => void;
+  onUpdateStatus?: (status: string) => void;
 }
 
 export function ProcessCard({ 
@@ -31,21 +33,23 @@ export function ProcessCard({
   onShare,
   onViewDiagram,
   onViewImprovements,
+  onDelete,
+  onUpdateStatus,
 }: ProcessCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completado": return "green";
-      case "en_progreso": return "blue";
-      case "pendiente": return "yellow";
+      case "active": return "green";
+      case "draft": return "blue";
+      case "archived": return "gray";
       default: return "gray";
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "completado": return "Completado";
-      case "en_progreso": return "En Progreso";
-      case "pendiente": return "Pendiente";
+      case "active": return "Activo";
+      case "draft": return "Borrador";
+      case "archived": return "Archivado";
       default: return status;
     }
   };
@@ -81,20 +85,70 @@ export function ProcessCard({
             )}
           </div>
           
-          <Group gap="xs">
-            <ActionIcon variant="light" color="blue" size="sm" onClick={() => onView?.(id)}>
-              <IconEye size={16} />
-            </ActionIcon>
-            <ActionIcon variant="light" color="green" size="sm" onClick={() => onEdit?.(id)}>
-              <IconEdit size={16} />
-            </ActionIcon>
-            <ActionIcon variant="light" color="purple" size="sm" onClick={() => onDownload?.(id)}>
-              <IconDownload size={16} />
-            </ActionIcon>
-            <ActionIcon variant="light" color="orange" size="sm" onClick={() => onShare?.(id)}>
-              <IconShare size={16} />
-            </ActionIcon>
-          </Group>
+          <Menu shadow="md" width={200}>
+            <Menu.Target>
+              <ActionIcon variant="light" color="gray">
+                <IconDotsVertical size={16} />
+              </ActionIcon>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Label>Acciones</Menu.Label>
+              <Menu.Item leftSection={<IconEye size={14} />} onClick={() => onView?.(id)}>
+                Ver detalles
+              </Menu.Item>
+              <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => onEdit?.(id)}>
+                Editar
+              </Menu.Item>
+              <Menu.Item leftSection={<IconChartBar size={14} />} onClick={() => onViewDiagram?.(id)}>
+                Ver diagrama
+              </Menu.Item>
+              <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => onDownload?.(id)}>
+                Descargar
+              </Menu.Item>
+              <Menu.Item leftSection={<IconShare size={14} />} onClick={() => onShare?.(id)}>
+                Compartir
+              </Menu.Item>
+              
+              <Menu.Divider />
+              <Menu.Label>Cambiar Estado</Menu.Label>
+              {status !== "active" && (
+                <Menu.Item 
+                  leftSection={<IconCheck size={14} />} 
+                  onClick={() => onUpdateStatus?.("active")}
+                  color="green"
+                >
+                  Marcar como activo
+                </Menu.Item>
+              )}
+              {status !== "draft" && (
+                <Menu.Item 
+                  leftSection={<IconEdit size={14} />} 
+                  onClick={() => onUpdateStatus?.("draft")}
+                  color="blue"
+                >
+                  Marcar como borrador
+                </Menu.Item>
+              )}
+              {status !== "archived" && (
+                <Menu.Item 
+                  leftSection={<IconArchive size={14} />} 
+                  onClick={() => onUpdateStatus?.("archived")}
+                  color="gray"
+                >
+                  Archivar
+                </Menu.Item>
+              )}
+              
+              <Menu.Divider />
+              <Menu.Item 
+                leftSection={<IconTrash size={14} />} 
+                color="red"
+                onClick={onDelete}
+              >
+                Eliminar
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
         </Group>
 
         <Group>

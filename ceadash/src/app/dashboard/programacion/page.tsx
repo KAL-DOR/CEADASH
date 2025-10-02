@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Title,
   Text,
@@ -20,6 +20,8 @@ import {
   Alert,
   Flex,
   Loader,
+  Center,
+  MultiSelect,
 } from "@mantine/core";
 import {
   IconPlus,
@@ -30,67 +32,49 @@ import {
   IconPhone,
   IconClock,
   IconUser,
+  IconExternalLink,
 } from "@tabler/icons-react";
+import { DateTimePicker } from "@mantine/dates";
 import { notifications } from "@mantine/notifications";
-import { sendSchedulingEmail, validateEmail, EMAIL_CONFIG } from "@/lib/email-service";
+import { useAuth } from "@/lib/auth/context";
+import { createClient } from "@/lib/supabase/client";
+import { sendSchedulingEmail, validateEmail } from "@/lib/email-service";
 
 interface ScheduledCall {
   id: string;
-  contactName: string;
-  contactEmail: string;
-  contactPhone: string;
-  scheduledDate: Date;
-  status: "programada" | "completada" | "cancelada";
-  notes: string;
-  emailSent?: boolean;
-  emailId?: string;
-  botConnectionUrl?: string;
-  agentId?: string;
-  processType?: string;
-  industry?: string;
+  contact_id: string;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  scheduled_date: string;
+  status: "scheduled" | "completed" | "cancelled" | "in_progress";
+  duration_minutes?: number | null;
+  notes: string | null;
+  email_sent: boolean;
+  email_id?: string | null;
+  bot_connection_url?: string | null;
+  agent_id?: string | null;
+  created_at?: string;
+}
+
+interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
 }
 
 export default function ProgramacionPage() {
+  const { profile } = useAuth();
   const [opened, setOpened] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isScheduling, setIsScheduling] = useState(false);
-  const [calls, setCalls] = useState<ScheduledCall[]>([
-    {
-      id: "1",
-      contactName: "María García",
-      contactEmail: "maria@empresa.com",
-      contactPhone: "+34 123 456 789",
-      scheduledDate: new Date("2024-10-15T10:00:00"),
-      status: "programada",
-      notes: "Mapeo de proceso de ventas",
-      emailSent: true,
-      emailId: "email_123",
-      botConnectionUrl: "https://elevenlabs.io/convai/conversation?agent_id=agent_123",
-      agentId: "agent_123",
-      processType: "ventas",
-      industry: "tecnologia",
-    },
-    {
-      id: "2",
-      contactName: "Carlos López",
-      contactEmail: "carlos@startup.com",
-      contactPhone: "+34 987 654 321",
-      scheduledDate: new Date("2024-10-16T14:30:00"),
-      status: "completada",
-      notes: "Optimización de flujo de trabajo",
-      emailSent: true,
-      emailId: "email_124",
-      botConnectionUrl: "https://elevenlabs.io/convai/conversation?agent_id=agent_124",
-      agentId: "agent_124",
-      processType: "onboarding",
-      industry: "servicios",
-    },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [calls, setCalls] = useState<ScheduledCall[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
 
   const [newCall, setNewCall] = useState({
-    contactName: "",
-    contactEmail: "",
-    contactPhone: "",
+    contactId: "",
     scheduledDate: new Date(),
     notes: "",
     processType: "",
@@ -98,21 +82,85 @@ export default function ProgramacionPage() {
     objectives: [] as string[],
     duration: 30,
     specificQuestions: [] as string[],
-    company: "",
   });
 
-  const handleScheduleCall = async () => {
-    // Validar email
-    if (!validateEmail(newCall.contactEmail)) {
+  // Load scheduled calls and contacts
+  useEffect(() => {
+    if (profile?.organization_id) {
+      loadScheduledCalls();
+      loadContacts();
+    }
+  }, [profile?.organization_id]);
+
+  const loadScheduledCalls = async () => {
+    try {
+      setLoading(true);
+      const supabase = createClient();
+      
+      // Get scheduled calls with contact information
+      const { data: scheduledCalls, error } = await supabase
+        .from('scheduled_calls')
+        .select(`
+          *,
+          contacts (
+            name,
+            email,
+            phone
+          )
+        `)
+        .eq('organization_id', profile?.organization_id)
+        .order('scheduled_date', { ascending: false });
+
+      if (error) throw error;
+
+      // Format the data
+      const formattedCalls = (scheduledCalls || []).map((call: Record<string, unknown>) => ({
+        ...call,
+        contact_name: (call.contacts as Record<string, unknown>)?.name as string,
+        contact_email: (call.contacts as Record<string, unknown>)?.email as string,
+        contact_phone: (call.contacts as Record<string, unknown>)?.phone as string,
+      })) as ScheduledCall[];
+
+      setCalls(formattedCalls);
+    } catch (error) {
+      console.error('Error loading scheduled calls:', error);
       notifications.show({
-        title: "Email inválido",
-        message: "Por favor, ingresa un email válido",
+        title: "Error",
+        message: "No se pudieron cargar las llamadas programadas",
+        color: "red",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadContacts = async () => {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('id, name, email, phone')
+        .eq('organization_id', profile?.organization_id)
+        .eq('status', 'active')
+        .order('name');
+
+      if (error) throw error;
+      setContacts(data || []);
+    } catch (error) {
+      console.error('Error loading contacts:', error);
+    }
+  };
+
+  const handleScheduleCall = async () => {
+    if (!newCall.contactId) {
+      notifications.show({
+        title: "Campo requerido",
+        message: "Por favor selecciona un contacto",
         color: "red",
       });
       return;
     }
 
-    // Validar campos requeridos para configuración del agente
     if (!newCall.processType || !newCall.industry) {
       notifications.show({
         title: "Campos requeridos",
@@ -125,13 +173,19 @@ export default function ProgramacionPage() {
     setIsScheduling(true);
 
     try {
-      const callId = Date.now().toString();
+      const supabase = createClient();
       
-      // Configurar agente dinámicamente
+      // Get contact details
+      const selectedContact = contacts.find(c => c.id === newCall.contactId);
+      if (!selectedContact) {
+        throw new Error('Contact not found');
+      }
+
+      // Prepare call data for agent configuration
       const callData = {
-        contactName: newCall.contactName,
-        contactEmail: newCall.contactEmail,
-        contactCompany: newCall.company,
+        contactName: selectedContact.name,
+        contactEmail: selectedContact.email,
+        contactCompany: "",
         processType: newCall.processType,
         objectives: newCall.objectives,
         duration: newCall.duration,
@@ -140,7 +194,7 @@ export default function ProgramacionPage() {
         specificQuestions: newCall.specificQuestions,
       };
 
-      // Crear configuración del agente
+      // Create agent configuration
       const agentResponse = await fetch('/api/elevenlabs/configure-agent', {
         method: 'POST',
         headers: {
@@ -158,59 +212,70 @@ export default function ProgramacionPage() {
         throw new Error(agentResult.error || 'Failed to configure agent');
       }
 
-      // Use the agent link from the API response
       const botConnectionUrl = agentResult.agentLink || `https://elevenlabs.io/convai/conversation?agent_id=${agentResult.agentId}`;
 
-      // Crear la llamada
-      const call: ScheduledCall = {
-        id: callId,
-        contactName: newCall.contactName,
-        contactEmail: newCall.contactEmail,
-        contactPhone: newCall.contactPhone,
-        scheduledDate: newCall.scheduledDate,
-        status: "programada",
-        notes: newCall.notes,
-        emailSent: false,
-        botConnectionUrl,
-        agentId: agentResult.agentId,
-        processType: newCall.processType,
-        industry: newCall.industry,
-      };
+      // Create scheduled call in database
+      const { data: scheduledCall, error: dbError } = await supabase
+        .from('scheduled_calls')
+        .insert([
+          {
+            organization_id: profile?.organization_id,
+            contact_id: newCall.contactId,
+            scheduled_date: newCall.scheduledDate.toISOString(),
+            status: 'scheduled',
+            duration_minutes: newCall.duration,
+            notes: newCall.notes || null,
+            email_sent: false,
+            bot_connection_url: botConnectionUrl,
+            created_by: profile?.id,
+          }
+        ])
+        .select()
+        .single();
 
-      // Enviar email con el link del agente
-      const emailResult = await sendSchedulingEmail({
-        to: newCall.contactEmail,
-        contactName: newCall.contactName,
-        scheduledDate: newCall.scheduledDate,
-        adminName: EMAIL_CONFIG.defaultAdminName,
-        companyName: EMAIL_CONFIG.defaultCompanyName,
-        botConnectionUrl,
-        processType: newCall.processType,
-        duration: newCall.duration,
-      });
+      if (dbError) throw dbError;
 
-      if (emailResult.success) {
-        call.emailSent = true;
-        call.emailId = emailResult.emailId;
-        
+      // Send email to contact
+      try {
+        const emailResult = await sendSchedulingEmail({
+          to: selectedContact.email,
+          contactName: selectedContact.name,
+          scheduledDate: newCall.scheduledDate,
+          adminName: profile?.full_name || "Equipo CEA",
+          companyName: "CEA Dashboard",
+          botConnectionUrl: botConnectionUrl,
+          processType: newCall.processType,
+          duration: newCall.duration,
+        });
+
+        // Update with email info
+        if (emailResult.success) {
+          await supabase
+            .from('scheduled_calls')
+            .update({
+              email_sent: true,
+              email_id: emailResult.emailId,
+            })
+            .eq('id', scheduledCall.id);
+        }
+
         notifications.show({
-          title: "¡Llamada programada exitosamente!",
-          message: `Email enviado a ${newCall.contactName}. Agente configurado para proceso: ${newCall.processType}`,
+          title: "¡Éxito!",
+          message: `Llamada programada y email enviado a ${selectedContact.name}`,
           color: "green",
         });
-      } else {
+      } catch (emailError) {
+        console.error('Email error:', emailError);
         notifications.show({
           title: "Llamada programada",
-          message: `Llamada creada con agente configurado, pero hubo un error enviando el email: ${emailResult.message}`,
+          message: "La llamada fue programada pero hubo un problema al enviar el email",
           color: "yellow",
         });
       }
 
-      setCalls([...calls, call]);
+      // Reset form and reload
       setNewCall({
-        contactName: "",
-        contactEmail: "",
-        contactPhone: "",
+        contactId: "",
         scheduledDate: new Date(),
         notes: "",
         processType: "",
@@ -218,14 +283,14 @@ export default function ProgramacionPage() {
         objectives: [],
         duration: 30,
         specificQuestions: [],
-        company: "",
       });
       setOpened(false);
+      loadScheduledCalls();
     } catch (error) {
-      console.error("Error scheduling call:", error);
+      console.error('Error scheduling call:', error);
       notifications.show({
         title: "Error",
-        message: "Hubo un error programando la llamada o configurando el agente",
+        message: "No se pudo programar la llamada",
         color: "red",
       });
     } finally {
@@ -235,37 +300,58 @@ export default function ProgramacionPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "programada": return "blue";
-      case "completada": return "green";
-      case "cancelada": return "red";
-      default: return "gray";
+      case "scheduled":
+        return "blue";
+      case "in_progress":
+        return "yellow";
+      case "completed":
+        return "green";
+      case "cancelled":
+        return "red";
+      default:
+        return "gray";
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "programada": return "Programada";
-      case "completada": return "Completada";
-      case "cancelada": return "Cancelada";
-      default: return status;
+      case "scheduled":
+        return "Programada";
+      case "in_progress":
+        return "En Progreso";
+      case "completed":
+        return "Completada";
+      case "cancelled":
+        return "Cancelada";
+      default:
+        return status;
     }
   };
 
   const filteredCalls = calls.filter(call =>
-    call.contactName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    call.contactEmail.toLowerCase().includes(searchQuery.toLowerCase())
+    call.contact_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    call.contact_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    call.notes?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const totalCalls = calls.length;
-  const completedCalls = calls.filter(call => call.status === "completada").length;
+  if (loading) {
+    return (
+      <Center style={{ minHeight: '50vh' }}>
+        <Stack align="center" gap="md">
+          <Loader size="lg" />
+          <Text c="dimmed">Cargando llamadas programadas...</Text>
+        </Stack>
+      </Center>
+    );
+  }
 
   return (
     <Stack gap="xl">
       {/* Header */}
       <Flex justify="space-between" align={{ base: "flex-start", sm: "center" }} direction={{ base: "column", sm: "row" }} gap="md">
         <div>
-          <Title order={1}>Programación de Llamadas</Title>
-          <Text c="dimmed">Gestiona y programa llamadas con ElevenLabs para mapear procesos</Text>
+          <Title order={1}>Programación</Title>
+          <Text c="dimmed">Programa y gestiona llamadas con ElevenLabs</Text>
         </div>
         <Button
           leftSection={<IconPlus size={16} />}
@@ -287,131 +373,135 @@ export default function ProgramacionPage() {
       </Flex>
 
       {/* Stats Cards */}
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing={{ base: "md", md: "lg" }}>
+      <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing={{ base: "md", md: "lg" }}>
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Stack gap="xs">
             <Text size="sm" c="dimmed">Total Llamadas</Text>
-            <Text size="xl" fw={700}>{totalCalls}</Text>
-          </Stack>
-        </Card>
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Stack gap="xs">
-            <Text size="sm" c="dimmed">Completadas</Text>
-            <Text size="xl" fw={700}>{completedCalls}</Text>
+            <Text size="xl" fw={700}>{calls.length}</Text>
           </Stack>
         </Card>
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Stack gap="xs">
             <Text size="sm" c="dimmed">Programadas</Text>
-            <Text size="xl" fw={700}>{calls.filter(c => c.status === "programada").length}</Text>
+            <Text size="xl" fw={700} c="blue">
+              {calls.filter(c => c.status === "scheduled").length}
+            </Text>
           </Stack>
         </Card>
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Stack gap="xs">
-            <Text size="sm" c="dimmed">Tasa de Éxito</Text>
-            <Text size="xl" fw={700}>{totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0}%</Text>
+            <Text size="sm" c="dimmed">En Progreso</Text>
+            <Text size="xl" fw={700} c="yellow">
+              {calls.filter(c => c.status === "in_progress").length}
+            </Text>
+          </Stack>
+        </Card>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Stack gap="xs">
+            <Text size="sm" c="dimmed">Completadas</Text>
+            <Text size="xl" fw={700} c="green">
+              {calls.filter(c => c.status === "completed").length}
+            </Text>
           </Stack>
         </Card>
       </SimpleGrid>
 
       {/* Search */}
-      <TextInput
-        placeholder="Buscar por nombre o email..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        leftSection={<IconUser size={16} />}
-      />
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <TextInput
+          placeholder="Buscar llamadas..."
+          leftSection={<IconCalendar size={16} />}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </Card>
 
       {/* Calls Table */}
       <Card shadow="sm" padding="lg" radius="md" withBorder>
         <Stack gap="md">
           <Title order={3}>Llamadas Programadas</Title>
-          <Table>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Contacto</Table.Th>
-                <Table.Th>Fecha y Hora</Table.Th>
-                <Table.Th>Estado</Table.Th>
-                <Table.Th>Email</Table.Th>
-                <Table.Th>Proceso</Table.Th>
-                <Table.Th>Agente</Table.Th>
-                <Table.Th>Acciones</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {filteredCalls.map((call) => (
-                <Table.Tr key={call.id}>
-                  <Table.Td>
-                    <Group gap="sm">
-                      <Avatar size="sm" color="blue">
-                        {call.contactName.charAt(0)}
-                      </Avatar>
-                      <div>
-                        <Text size="sm" fw={500}>{call.contactName}</Text>
-                        <Text size="xs" c="dimmed">{call.contactEmail}</Text>
-                      </div>
-                    </Group>
-                  </Table.Td>
-                  <Table.Td>
-                    <div>
-                      <Text size="sm" fw={500}>
-                        {call.scheduledDate.toLocaleDateString('es-ES')}
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        {call.scheduledDate.toLocaleTimeString('es-ES', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </Text>
-                    </div>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={getStatusColor(call.status)} variant="light">
-                      {getStatusLabel(call.status)}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs">
-                      {call.emailSent ? (
-                        <Badge color="green" variant="light" leftSection={<IconCheck size={12} />}>
+          {filteredCalls.length === 0 ? (
+            <Center py="xl">
+              <Stack align="center" gap="sm">
+                <IconCalendar size={48} stroke={1.5} color="gray" />
+                <Text c="dimmed">No hay llamadas programadas</Text>
+              </Stack>
+            </Center>
+          ) : (
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Contacto</Table.Th>
+                  <Table.Th>Fecha Programada</Table.Th>
+                  <Table.Th>Duración</Table.Th>
+                  <Table.Th>Estado</Table.Th>
+                  <Table.Th>Email Enviado</Table.Th>
+                  <Table.Th>Acciones</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {filteredCalls.map((call) => (
+                  <Table.Tr key={call.id}>
+                    <Table.Td>
+                      <Group gap="sm">
+                        <Avatar size="sm" color="blue">
+                          {call.contact_name?.charAt(0) || "?"}
+                        </Avatar>
+                        <div>
+                          <Text size="sm" fw={500}>{call.contact_name || "N/A"}</Text>
+                          <Text size="xs" c="dimmed">{call.contact_email || "N/A"}</Text>
+                        </div>
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <IconCalendar size={16} />
+                        <Text size="sm">
+                          {new Date(call.scheduled_date).toLocaleString('es-ES', {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          })}
+                        </Text>
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{call.duration_minutes || 30} min</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge color={getStatusColor(call.status)} variant="light">
+                        {getStatusLabel(call.status)}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      {call.email_sent ? (
+                        <Badge color="green" leftSection={<IconCheck size={12} />} variant="light">
                           Enviado
                         </Badge>
                       ) : (
-                        <Badge color="red" variant="light" leftSection={<IconAlertCircle size={12} />}>
-                          Falló
+                        <Badge color="gray" leftSection={<IconAlertCircle size={12} />} variant="light">
+                          Pendiente
                         </Badge>
                       )}
-                    </Group>
-                  </Table.Td>
-                  <Table.Td>
-                    <div>
-                      <Text size="sm" fw={500}>{call.processType || "N/A"}</Text>
-                      <Text size="xs" c="dimmed">{call.industry || "N/A"}</Text>
-                    </div>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="xs" c="dimmed" style={{ fontFamily: 'monospace' }}>
-                      {call.agentId ? call.agentId.substring(0, 8) + '...' : 'N/A'}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs">
-                      {call.botConnectionUrl && (
+                    </Table.Td>
+                    <Table.Td>
+                      {call.bot_connection_url && (
                         <Button
+                          component="a"
+                          href={call.bot_connection_url}
+                          target="_blank"
                           size="xs"
                           variant="light"
-                          leftSection={<IconPhone size={12} />}
-                          onClick={() => window.open(call.botConnectionUrl, '_blank')}
+                          rightSection={<IconExternalLink size={14} />}
                         >
-                          Conectar
+                          Ver Agente
                         </Button>
                       )}
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          )}
         </Stack>
       </Card>
 
@@ -423,85 +513,73 @@ export default function ProgramacionPage() {
         size="lg"
       >
         <Stack gap="md">
-          <TextInput
-            label="Nombre del contacto"
-            placeholder="Juan Pérez"
-            value={newCall.contactName}
-            onChange={(e) => setNewCall({ ...newCall, contactName: e.target.value })}
+          <Alert icon={<IconAlertCircle size={16} />} color="blue">
+            El contacto recibirá un email con el enlace para conectarse con el agente de IA
+          </Alert>
+
+          <Select
+            label="Contacto"
+            placeholder="Selecciona un contacto"
+            data={contacts.map(c => ({ value: c.id, label: `${c.name} (${c.email})` }))}
+            value={newCall.contactId}
+            onChange={(value) => setNewCall({ ...newCall, contactId: value || "" })}
             required
+            searchable
           />
-          <TextInput
-            label="Email"
-            placeholder="juan@empresa.com"
-            value={newCall.contactEmail}
-            onChange={(e) => setNewCall({ ...newCall, contactEmail: e.target.value })}
+
+          <DateTimePicker
+            label="Fecha y hora programada"
+            placeholder="Selecciona fecha y hora"
+            value={newCall.scheduledDate}
+            onChange={(value) => {
+              if (value) {
+                let dateValue: Date;
+                const valueAsUnknown = value as unknown;
+                if (valueAsUnknown instanceof Date) {
+                  dateValue = valueAsUnknown;
+                } else {
+                  dateValue = new Date(valueAsUnknown as string);
+                }
+                setNewCall({ ...newCall, scheduledDate: dateValue });
+              }
+            }}
             required
+            minDate={new Date()}
           />
-          <TextInput
-            label="Teléfono"
-            placeholder="+34 123 456 789"
-            value={newCall.contactPhone}
-            onChange={(e) => setNewCall({ ...newCall, contactPhone: e.target.value })}
-            required
-          />
-          <TextInput
-            label="Fecha y hora"
-            placeholder="2024-09-30 10:00"
-            value={newCall.scheduledDate.toISOString().slice(0, 16)}
-            onChange={(e) => setNewCall({ 
-              ...newCall, 
-              scheduledDate: new Date(e.target.value) 
-            })}
-            type="datetime-local"
-            required
-          />
-          <TextInput
-            label="Empresa"
-            placeholder="Nombre de la empresa"
-            value={newCall.company}
-            onChange={(e) => setNewCall({ ...newCall, company: e.target.value })}
-          />
-          
+
           <Select
             label="Tipo de Proceso"
-            placeholder="Selecciona el tipo de proceso a mapear"
+            placeholder="Selecciona el tipo"
+            data={[
+              { value: "ventas", label: "Proceso de Ventas" },
+              { value: "onboarding", label: "Onboarding de Clientes" },
+              { value: "soporte", label: "Soporte Técnico" },
+              { value: "produccion", label: "Producción" },
+              { value: "logistica", label: "Logística" },
+              { value: "otro", label: "Otro" },
+            ]}
             value={newCall.processType}
             onChange={(value) => setNewCall({ ...newCall, processType: value || "" })}
-            data={[
-              { value: "onboarding", label: "Incorporación de empleados" },
-              { value: "ventas", label: "Proceso de ventas" },
-              { value: "soporte", label: "Atención al cliente" },
-              { value: "manufactura", label: "Proceso de manufactura" },
-              { value: "compras", label: "Proceso de compras" },
-              { value: "rrhh", label: "Recursos humanos" },
-              { value: "finanzas", label: "Procesos financieros" },
-              { value: "marketing", label: "Marketing y publicidad" },
-              { value: "logistica", label: "Logística y distribución" },
-              { value: "otro", label: "Otro proceso" },
-            ]}
             required
           />
-          
+
           <Select
             label="Industria"
             placeholder="Selecciona la industria"
-            value={newCall.industry}
-            onChange={(value) => setNewCall({ ...newCall, industry: value || "" })}
             data={[
               { value: "tecnologia", label: "Tecnología" },
-              { value: "manufactura", label: "Manufactura" },
               { value: "servicios", label: "Servicios" },
-              { value: "retail", label: "Retail/Comercio" },
+              { value: "manufactura", label: "Manufactura" },
+              { value: "retail", label: "Retail" },
               { value: "salud", label: "Salud" },
               { value: "educacion", label: "Educación" },
-              { value: "finanzas", label: "Finanzas" },
-              { value: "construccion", label: "Construcción" },
-              { value: "alimentaria", label: "Industria alimentaria" },
-              { value: "otro", label: "Otra industria" },
+              { value: "otro", label: "Otro" },
             ]}
+            value={newCall.industry}
+            onChange={(value) => setNewCall({ ...newCall, industry: value || "" })}
             required
           />
-          
+
           <NumberInput
             label="Duración estimada (minutos)"
             placeholder="30"
@@ -511,43 +589,35 @@ export default function ProgramacionPage() {
             max={120}
             step={15}
           />
-          
+
+          <MultiSelect
+            label="Objetivos de la llamada"
+            placeholder="Selecciona o escribe objetivos"
+            data={[
+              { value: "mapear-proceso", label: "Mapear proceso actual" },
+              { value: "identificar-cuellos", label: "Identificar cuellos de botella" },
+              { value: "optimizar", label: "Optimizar eficiencia" },
+              { value: "documentar", label: "Documentar procedimientos" },
+            ]}
+            value={newCall.objectives}
+            onChange={(value) => setNewCall({ ...newCall, objectives: value })}
+            searchable
+          />
+
           <Textarea
             label="Notas adicionales"
-            placeholder="Objetivo específico de la llamada, contexto adicional..."
+            placeholder="Información adicional sobre la llamada..."
             value={newCall.notes}
             onChange={(e) => setNewCall({ ...newCall, notes: e.target.value })}
             rows={3}
           />
-          
-          <Alert color="blue" variant="light">
-            <Text size="sm">
-              <strong>🤖 Configuración automática:</strong> El agente de IA se configurará automáticamente 
-              basado en el tipo de proceso e industria seleccionados.
-            </Text>
-          </Alert>
-          
-          <Alert color="green" variant="light">
-            <Text size="sm">
-              <strong>📧 Email automático:</strong> Se enviará un email al contacto con las instrucciones 
-              para conectarse con el bot de ElevenLabs configurado específicamente para su proceso.
-            </Text>
-          </Alert>
-          
+
           <Group justify="flex-end">
-            <Button 
-              variant="light" 
-              onClick={() => setOpened(false)}
-              disabled={isScheduling}
-            >
+            <Button variant="light" onClick={() => setOpened(false)} disabled={isScheduling}>
               Cancelar
             </Button>
-            <Button 
-              onClick={handleScheduleCall}
-              loading={isScheduling}
-              leftSection={isScheduling ? <Loader size={16} /> : <IconCalendar size={16} />}
-            >
-              {isScheduling ? "Configurando agente..." : "Programar Llamada"}
+            <Button onClick={handleScheduleCall} loading={isScheduling}>
+              Programar Llamada
             </Button>
           </Group>
         </Stack>
