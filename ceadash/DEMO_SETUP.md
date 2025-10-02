@@ -1,4 +1,4 @@
-# 🎬 Demo Data Setup Guide
+# Demo Data Setup Guide
 
 ## Overview
 This guide helps you populate your database with realistic demo data for testing and demonstrations.
