@@ -235,6 +235,15 @@ export default function ProgramacionPage() {
 
       if (dbError) throw dbError;
 
+      // Get organization CC emails
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('notification_cc_emails')
+        .eq('id', profile?.organization_id)
+        .single();
+
+      const ccEmails = orgData?.notification_cc_emails || [];
+
       // Send email to contact
       try {
         const emailResult = await sendSchedulingEmail({
@@ -246,6 +255,7 @@ export default function ProgramacionPage() {
           botConnectionUrl: botConnectionUrl,
           processType: newCall.processType,
           duration: newCall.duration,
+          ccEmails: ccEmails,
         });
 
         // Update with email info

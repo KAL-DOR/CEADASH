@@ -12,6 +12,7 @@ export interface EmailData {
   botConnectionUrl: string;
   processType?: string;
   duration?: number;
+  ccEmails?: string[]; // Optional CC emails from user configuration
 }
 
 export interface EmailResult {
@@ -24,7 +25,7 @@ export interface EmailResult {
 export const EMAIL_CONFIG = {
   defaultAdminName: "Equipo CEA",
   defaultCompanyName: "Comisión Estatal de Agua",
-  fromEmail: "noreply@cea.gob.mx",
+  fromEmail: "onboarding@resend.dev", // Using Resend's test domain - replace with your verified domain
 };
 
 /**
@@ -279,7 +280,7 @@ function getProcessTypeLabel(processType: string): string {
 }
 
 /**
- * Simulates sending an email (in production, integrate with actual email service)
+ * Sends an email using Resend API (or simulates if API key not configured)
  */
 export async function sendSchedulingEmail(data: EmailData): Promise<EmailResult> {
   try {
@@ -291,28 +292,84 @@ export async function sendSchedulingEmail(data: EmailData): Promise<EmailResult>
       };
     }
 
-    // Simulate email sending delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Validate CC emails if provided
+    if (data.ccEmails && data.ccEmails.length > 0) {
+      for (const ccEmail of data.ccEmails) {
+        if (!validateEmail(ccEmail)) {
+          return {
+            success: false,
+            error: `Invalid CC email address: ${ccEmail}`,
+          };
+        }
+      }
+    }
 
     // Generate email content
     const htmlContent = generateEmailTemplate(data);
+    const subject = `Entrevista CEA programada - ${getProcessTypeLabel(data.processType || "")}`;
     
-    // In production, replace this with actual email service integration
-    // For now, we'll simulate a successful send
-    const emailId = `email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Check if Resend API key is configured
+    const resendApiKey = process.env.RESEND_API_KEY;
     
-    console.log("📧 Email would be sent:", {
-      to: data.to,
-      subject: `Llamada programada - ${getProcessTypeLabel(data.processType || "")}`,
-      html: htmlContent,
-      emailId,
-    });
+    if (resendApiKey) {
+      // Send real email using Resend
+      try {
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: EMAIL_CONFIG.fromEmail,
+            to: [data.to],
+            cc: data.ccEmails || [],
+            subject: subject,
+            html: htmlContent,
+          }),
+        });
 
-    return {
-      success: true,
-      emailId,
-      message: `Email sent successfully to ${data.to}`,
-    };
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.message || 'Failed to send email');
+        }
+
+        console.log("✅ Email sent successfully via Resend:", result.id);
+
+        return {
+          success: true,
+          emailId: result.id,
+          message: `Email sent successfully to ${data.to}${data.ccEmails?.length ? ` with CC to ${data.ccEmails.join(', ')}` : ''}`,
+        };
+      } catch (emailError) {
+        console.error("Error sending via Resend:", emailError);
+        return {
+          success: false,
+          error: emailError instanceof Error ? emailError.message : "Failed to send email",
+        };
+      }
+    } else {
+      // Simulate email sending (for development/demo without API key)
+      console.log("⚠️  RESEND_API_KEY not configured - simulating email send");
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const emailId = `sim_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      console.log("📧 Email simulation:", {
+        to: data.to,
+        cc: data.ccEmails,
+        subject: subject,
+        emailId,
+      });
+
+      return {
+        success: true,
+        emailId,
+        message: `Email simulated (no RESEND_API_KEY) to ${data.to}${data.ccEmails?.length ? ` with CC to ${data.ccEmails.join(', ')}` : ''}`,
+      };
+    }
 
   } catch (error) {
     console.error("Error sending email:", error);
