@@ -32,6 +32,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
+    // Set a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.warn('Auth loading timeout - setting loading to false');
+      setLoading(false);
+    }, 5000); // 5 second timeout
+
     // Check for demo mode
     const checkDemoMode = () => {
       const demoModeCookie = document.cookie
@@ -46,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: 'demo@ceadash.com',
           password: 'demo123'
         }).then(({ data, error }) => {
+          clearTimeout(timeoutId);
           if (error) {
             console.error('Demo login failed:', error);
             // Fallback to fake profile if login fails
@@ -79,6 +86,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               loadUserProfile(data.session.user.id);
             }
           }
+        }).catch((err) => {
+          console.error('Demo login error:', err);
+          clearTimeout(timeoutId);
+          setLoading(false);
         });
         return;
       }
@@ -87,15 +98,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkDemoMode();
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadUserProfile(session.user.id);
-      } else if (!isDemoMode) {
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        clearTimeout(timeoutId);
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          loadUserProfile(session.user.id);
+        } else if (!isDemoMode) {
+          setLoading(false);
+        }
+      })
+      .catch((error) => {
+        console.error('Session fetch error:', error);
+        clearTimeout(timeoutId);
         setLoading(false);
-      }
-    });
+      });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -113,7 +131,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loadUserProfile = async (userId: string) => {
@@ -162,7 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, fullName: string, organizationName: string) => {
     try {
       // Create user account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {

@@ -10,8 +10,9 @@ import {
   Flex,
   Loader,
   Center,
+  Group,
 } from "@mantine/core";
-import { IconPlus, IconUpload } from "@tabler/icons-react";
+import { IconPlus, IconUpload, IconFolderOpen } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { useAuth } from "@/lib/auth/context";
 import { createClient } from "@/lib/supabase/client";
@@ -71,137 +72,6 @@ export default function ProcesosPage() {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCreateProcess = async () => {
-    if (!newProcess.name) {
-      notifications.show({
-        title: "Campo requerido",
-        message: "Por favor ingresa el nombre del proceso",
-        color: "red",
-      });
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const supabase = createClient();
-
-      const { error } = await supabase
-        .from('processes')
-        .insert([
-          {
-            organization_id: profile?.organization_id,
-            name: newProcess.name,
-            description: newProcess.description || null,
-            status: newProcess.status,
-            created_by: profile?.id,
-          }
-        ]);
-
-      if (error) throw error;
-
-      // Create activity entry
-      await supabase
-        .from('activities')
-        .insert({
-          organization_id: profile?.organization_id,
-          user_id: profile?.id,
-          activity_type: 'process_created',
-          title: `Proceso creado: ${newProcess.name}`,
-          description: newProcess.description || undefined,
-          metadata: { process_name: newProcess.name, status: newProcess.status }
-        });
-
-      notifications.show({
-        title: "¡Éxito!",
-        message: "Proceso creado correctamente",
-        color: "green",
-      });
-
-      setNewProcess({ name: "", description: "", status: "draft" });
-      setOpened(false);
-      loadProcesses();
-    } catch (error) {
-      console.error('Error creating process:', error);
-      notifications.show({
-        title: "Error",
-        message: "No se pudo crear el proceso",
-        color: "red",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleImportTranscription = async () => {
-    if (!uploadData.transcriptionText || !uploadData.processName) {
-      notifications.show({
-        title: "Campos requeridos",
-        message: "Por favor completa todos los campos",
-        color: "red",
-      });
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const supabase = createClient();
-
-      // First, create the transcription
-      const { data: transcription, error: transcriptionError } = await supabase
-        .from('transcriptions')
-        .insert([
-          {
-            organization_id: profile?.organization_id,
-            content: uploadData.transcriptionText,
-            metadata: {
-              process_type: uploadData.processType,
-              imported_at: new Date().toISOString(),
-            },
-            processed: false,
-          }
-        ])
-        .select()
-        .single();
-
-      if (transcriptionError) throw transcriptionError;
-
-      // Then create the process linked to the transcription
-      const { error: processError } = await supabase
-        .from('processes')
-        .insert([
-          {
-            organization_id: profile?.organization_id,
-            name: uploadData.processName,
-            description: `Proceso importado desde transcripción - ${uploadData.processType}`,
-            status: 'draft',
-            transcription_id: transcription.id,
-            created_by: profile?.id,
-          }
-        ]);
-
-      if (processError) throw processError;
-
-      notifications.show({
-        title: "¡Éxito!",
-        message: "Transcripción importada correctamente. El proceso será analizado en breve.",
-        color: "green",
-      });
-
-      setUploadData({ transcriptionText: "", processName: "", processType: "" });
-      setUploadOpened(false);
-      loadProcesses();
-    } catch (error) {
-      console.error('Error importing transcription:', error);
-      notifications.show({
-        title: "Error",
-        message: "No se pudo importar la transcripción",
-        color: "red",
-      });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -314,6 +184,15 @@ export default function ProcesosPage() {
         </div>
         <Group>
           <Button
+            leftSection={<IconFolderOpen size={16} />}
+            onClick={() => window.open('https://crimson-snowboard-382.notion.site/Procesos-23e31d8762438016a65ae59b43137c07', '_blank')}
+            variant="filled"
+            color="blue"
+            size="md"
+          >
+            Ver Procesos Guardados
+          </Button>
+          <Button
             leftSection={<IconUpload size={16} />}
             onClick={() => window.open('https://tools.fitcluv.com/form/19083649-234c-4815-9903-7864a61f6884', '_blank')}
             variant="light"
@@ -365,7 +244,9 @@ export default function ProcesosPage() {
           <Stack align="center" gap="sm">
             <IconPlus size={48} stroke={1.5} color="gray" />
             <Text c="dimmed">No hay procesos para mostrar</Text>
-            <Button onClick={() => setOpened(true)}>Crear primer proceso</Button>
+            <Button onClick={() => window.open('https://tools.fitcluv.com/form/aa6a028e-8e5b-463e-bc2b-6d6d760927f5', '_blank')}>
+              Crear primer proceso
+            </Button>
           </Stack>
         </Center>
       ) : (

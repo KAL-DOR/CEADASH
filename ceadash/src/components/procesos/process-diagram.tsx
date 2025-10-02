@@ -59,20 +59,21 @@ export function ProcessDiagram({ data, title = "Diagrama de Proceso", onNodeClic
     }
   };
 
-  const getNodeLabel = (type: DiagramNode['type']) => {
-    switch (type) {
-      case 'start':
-        return 'Inicio';
-      case 'process':
-        return 'Proceso';
-      case 'decision':
-        return 'Decisión';
-      case 'end':
-        return 'Fin';
-      default:
-        return 'Nodo';
-    }
-  };
+  // Helper function to get node label (kept for future use)
+  // const getNodeLabel = (type: DiagramNode['type']) => {
+  //   switch (type) {
+  //     case 'start':
+  //       return 'Inicio';
+  //     case 'process':
+  //       return 'Proceso';
+  //     case 'decision':
+  //       return 'Decisión';
+  //     case 'end':
+  //       return 'Fin';
+  //     default:
+  //       return 'Nodo';
+  //   }
+  // };
 
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>

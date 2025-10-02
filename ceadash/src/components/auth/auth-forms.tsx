@@ -57,7 +57,7 @@ export function AuthForms() {
         });
         router.push('/dashboard');
       }
-    } catch (err) {
+    } catch {
       setError('Error inesperado al iniciar sesión');
     } finally {
       setLoading(false);
@@ -101,7 +101,7 @@ export function AuthForms() {
         });
         // Don't redirect yet, user needs to confirm email
       }
-    } catch (err) {
+    } catch {
       setError('Error inesperado al registrarse');
     } finally {
       setLoading(false);

@@ -218,7 +218,8 @@ export class ElevenLabsAgentService {
         return null;
       }
 
-      const agentData = await agentResponse.json();
+      // Get agent data (not used but validates agent exists)
+      await agentResponse.json();
       
       // Try to get the signed URL endpoint
       const signedUrlResponse = await fetch(`${this.baseUrl}/convai/agents/${agentId}/url/signed`, {
