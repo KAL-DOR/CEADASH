@@ -37,7 +37,6 @@ import {
 import { DateTimePicker } from "@mantine/dates";
 import { notifications } from "@mantine/notifications";
 import { useAuth } from "@/lib/auth/context";
-import { sendSchedulingEmail, validateEmail } from "@/lib/email-service";
 
 interface ScheduledCall {
   id: string;
@@ -61,6 +60,7 @@ interface Contact {
   name: string;
   email: string;
   phone: string | null;
+  status?: string;
 }
 
 export default function ProgramacionPage() {
@@ -124,8 +124,8 @@ export default function ProgramacionPage() {
       const data = await response.json();
       // Filter active contacts and sort by name
       const activeContacts = (data || [])
-        .filter((c: any) => c.status === 'active')
-        .sort((a: any, b: any) => a.name.localeCompare(b.name));
+        .filter((c: Contact) => c.status === 'active')
+        .sort((a: Contact, b: Contact) => a.name.localeCompare(b.name));
       
       setContacts(activeContacts);
     } catch (error) {

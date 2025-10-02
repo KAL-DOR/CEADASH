@@ -34,6 +34,7 @@ export async function GET(request: Request) {
 
     const processes = processesResult.data || []
     const avgEfficiency = processes.length > 0
+      // @ts-expect-error - Supabase generated types issue
       ? Math.round(processes.reduce((sum, p) => sum + (p.efficiency_score || 0), 0) / processes.length)
       : 0
 

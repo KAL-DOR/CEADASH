@@ -41,28 +41,26 @@ export async function POST(request: Request) {
     
     const { error } = await supabase
       .from('contacts')
-      .insert([body])
+      .insert(body)
 
     if (error) {
       console.error('API: Error creating contact:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Create activity entry
+    // Create activity entry (non-fatal)
     try {
-      await supabase
-        .from('activities')
-        .insert({
-          organization_id: body.organization_id,
-          user_id: body.created_by,
-          activity_type: 'contact_added',
-          title: `Contacto agregado: ${body.name}`,
-          description: body.email,
-          metadata: { contact_name: body.name, contact_email: body.email }
-        })
+      // @ts-expect-error - Supabase types are too strict for activities
+      await supabase.from('activities').insert({
+        organization_id: body.organization_id,
+        user_id: body.created_by,
+        activity_type: 'contact_added',
+        title: `Contacto agregado: ${body.name}`,
+        description: body.email,
+        metadata: { contact_name: body.name, contact_email: body.email }
+      })
     } catch (activityError) {
       console.error('API: Failed to create activity (non-fatal):', activityError)
-      // Don't fail the request if activity creation fails
     }
 
     console.log('API: Contact created successfully')
@@ -76,10 +74,12 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json()
-    const { id, ...updateData } = body
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, created_at, updated_at, ...updateData } = body
     
     const { error } = await supabase
       .from('contacts')
+      // @ts-expect-error - Supabase generated types are overly restrictive
       .update(updateData)
       .eq('id', id)
 
