@@ -24,153 +24,42 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user] = useState<User | null>(null);
+  const [session] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
-    // Set a timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      console.warn('Auth loading timeout - setting loading to false');
-      setLoading(false);
-    }, 5000); // 5 second timeout
-
-    // Check for demo mode
-    const checkDemoMode = () => {
-      const demoModeCookie = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('demo-mode='));
-      const isDemo = demoModeCookie?.split('=')[1] === 'true';
-      setIsDemoMode(isDemo);
-      
-      if (isDemo) {
-        // Sign in as demo user instead of using anon
-        supabase.auth.signInWithPassword({
-          email: 'demo@ceadash.com',
-          password: 'demo123'
-        }).then(({ data, error }) => {
-          clearTimeout(timeoutId);
-          if (error) {
-            console.error('Demo login failed:', error);
-            // Fallback to fake profile if login fails
-            const demoOrgId = '00000000-0000-0000-0000-000000000001';
-            const demoUserId = '00000000-0000-0000-0000-000000000002';
-            
-            setProfile({
-              id: demoUserId,
-              organization_id: demoOrgId,
-              email: 'demo@ceadash.com',
-              full_name: 'Usuario Demo',
-              avatar_url: null,
-              role: 'admin',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            });
-            setOrganization({
-              id: demoOrgId,
-              name: 'Organización Demo',
-              slug: 'demo-org',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              settings: {},
-            });
-            setLoading(false);
-          } else {
-            // Successfully logged in as demo user
-            setSession(data.session);
-            setUser(data.session?.user ?? null);
-            if (data.session?.user) {
-              loadUserProfile(data.session.user.id);
-            }
-          }
-        }).catch((err) => {
-          console.error('Demo login error:', err);
-          clearTimeout(timeoutId);
-          setLoading(false);
-        });
-        return;
-      }
-    };
-
-    checkDemoMode();
-
-    // Get initial session
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        clearTimeout(timeoutId);
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          loadUserProfile(session.user.id);
-        } else if (!isDemoMode) {
-          setLoading(false);
-        }
-      })
-      .catch((error) => {
-        console.error('Session fetch error:', error);
-        clearTimeout(timeoutId);
-        setLoading(false);
-      });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await loadUserProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setOrganization(null);
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      clearTimeout(timeoutId);
-      subscription.unsubscribe();
-    };
+    // Always use demo mode - no authentication required
+    const demoOrgId = '00000000-0000-0000-0000-000000000001';
+    const demoUserId = '00000000-0000-0000-0000-000000000002';
+    
+    setIsDemoMode(true);
+    setProfile({
+      id: demoUserId,
+      organization_id: demoOrgId,
+      email: 'demo@ceadash.com',
+      full_name: 'Usuario Demo',
+      avatar_url: null,
+      role: 'admin',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    setOrganization({
+      id: demoOrgId,
+      name: 'Organización Demo',
+      slug: 'demo-org',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      settings: {},
+    });
+    setLoading(false);
   }, []);
 
-  const loadUserProfile = async (userId: string) => {
-    try {
-      // Load profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (profileError) {
-        console.error('Profile load error:', profileError);
-        setLoading(false);
-        return;
-      }
-      
-      setProfile(profileData);
-
-      // Load organization
-      if (profileData?.organization_id) {
-        const { data: orgData, error: orgError } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('id', profileData.organization_id)
-          .single();
-
-        if (orgError) throw orgError;
-        setOrganization(orgData);
-      }
-    } catch (error) {
-      console.error('Error loading user profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Not needed in demo mode - profile is set directly
+  // const loadUserProfile = async (userId: string) => { ... };
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({

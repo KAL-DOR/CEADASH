@@ -37,22 +37,9 @@ export default function DashboardLayout({
   const [opened, setOpened] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const { user, profile, organization, loading, isDemoMode, signOut } = useAuth();
+  const { profile, organization, isDemoMode, signOut } = useAuth();
 
-  // Redirect to home if not authenticated and not in demo mode
-  if (!loading && !user && !isDemoMode) {
-    router.push('/');
-    return null;
-  }
-
-  // Show loading while checking auth
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <Text>Cargando...</Text>
-      </div>
-    );
-  }
+  // No auth checks needed - always in demo mode
 
   const handleSignOut = async () => {
     await signOut();
@@ -129,7 +116,7 @@ export default function DashboardLayout({
             <Menu.Target>
               <ActionIcon variant="subtle" size="lg">
                 <Avatar size="sm" color="blue" src={profile?.avatar_url}>
-                  {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                  {profile?.full_name?.charAt(0) || 'D'}
                 </Avatar>
               </ActionIcon>
             </Menu.Target>
@@ -138,7 +125,7 @@ export default function DashboardLayout({
               <Menu.Label>
                 <div>
                   <Text size="sm" fw={500}>{profile?.full_name || 'Usuario'}</Text>
-                  <Text size="xs" c="dimmed">{user?.email}</Text>
+                  <Text size="xs" c="dimmed">{profile?.email}</Text>
                   {organization && (
                     <Text size="xs" c="dimmed">{organization.name}</Text>
                   )}

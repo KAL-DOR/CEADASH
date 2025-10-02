@@ -29,10 +29,10 @@ import {
   IconEdit,
   IconTrash,
   IconSearch,
+  IconRefresh,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { useAuth } from "@/lib/auth/context";
-import { createClient } from "@/lib/supabase/client";
 
 interface Contact {
   id: string;
@@ -66,31 +66,73 @@ export default function ContactosPage() {
 
   // Load contacts from Supabase
   useEffect(() => {
-    if (profile?.organization_id) {
-      loadContacts();
-    }
+    let timeoutId: NodeJS.Timeout;
+    let isMounted = true;
+    
+    const loadData = async () => {
+      if (!profile?.organization_id) {
+        setLoading(false);
+        return;
+      }
+
+      // Set timeout to prevent infinite loading - increased to 10 seconds
+      timeoutId = setTimeout(() => {
+        console.warn('Contacts loading timeout - still trying...');
+        if (isMounted) {
+          setLoading(false);
+        }
+      }, 10000);
+
+      try {
+        await loadContacts();
+      } catch (err) {
+        console.error('Failed to load contacts:', err);
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [profile?.organization_id]);
 
   const loadContacts = async () => {
     try {
       setLoading(true);
-      const supabase = createClient();
       
-      const { data, error } = await supabase
-        .from('contacts')
-        .select('*')
-        .eq('organization_id', profile?.organization_id)
-        .order('created_at', { ascending: false });
+      console.log('🔍 Loading contacts for org:', profile?.organization_id);
+      console.log('⏰ Starting query at:', new Date().toISOString());
+      
+      const startTime = Date.now();
+      const response = await fetch(`/api/contacts?organization_id=${profile?.organization_id}`);
+      const duration = Date.now() - startTime;
+      
+      console.log('✅ API call completed in', duration, 'ms');
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      console.log('📊 Contacts loaded:', { 
+        count: data?.length || 0,
+        sample: data?.slice(0, 2)
+      });
+
       setContacts(data || []);
     } catch (error) {
-      console.error('Error loading contacts:', error);
+      console.error('💥 Exception loading contacts:', error);
       notifications.show({
         title: "Error",
         message: "No se pudieron cargar los contactos",
         color: "red",
       });
+      setContacts([]);
     } finally {
       setLoading(false);
     }
@@ -108,7 +150,6 @@ export default function ContactosPage() {
 
     try {
       setSubmitting(true);
-      const supabase = createClient();
 
       const contactData = {
         organization_id: profile?.organization_id,
@@ -123,12 +164,13 @@ export default function ContactosPage() {
 
       if (editingContact) {
         // Update existing contact
-        const { error } = await supabase
-          .from('contacts')
-          .update(contactData)
-          .eq('id', editingContact.id);
+        const response = await fetch('/api/contacts', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...contactData, id: editingContact.id }),
+        });
 
-        if (error) throw error;
+        if (!response.ok) throw new Error('Failed to update contact');
 
         notifications.show({
           title: "¡Éxito!",
@@ -137,23 +179,13 @@ export default function ContactosPage() {
         });
       } else {
         // Create new contact
-        const { error } = await supabase
-          .from('contacts')
-          .insert([contactData]);
+        const response = await fetch('/api/contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(contactData),
+        });
 
-        if (error) throw error;
-
-        // Create activity entry
-        await supabase
-          .from('activities')
-          .insert({
-            organization_id: profile?.organization_id,
-            user_id: profile?.id,
-            activity_type: 'contact_added',
-            title: `Contacto agregado: ${newContact.name}`,
-            description: `${newContact.email}`,
-            metadata: { contact_name: newContact.name, contact_email: newContact.email }
-          });
+        if (!response.ok) throw new Error('Failed to create contact');
 
         notifications.show({
           title: "¡Éxito!",
@@ -196,13 +228,11 @@ export default function ContactosPage() {
     }
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('contacts')
-        .delete()
-        .eq('id', contactId);
+      const response = await fetch(`/api/contacts?id=${contactId}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to delete contact');
 
       notifications.show({
         title: "¡Éxito!",
@@ -265,23 +295,33 @@ export default function ContactosPage() {
           <Title order={1}>Contactos</Title>
           <Text c="dimmed">Gestiona tus contactos y programa llamadas con ElevenLabs</Text>
         </div>
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={() => setOpened(true)}
-          size="md"
-          hiddenFrom="sm"
-          fullWidth
-        >
-          Agregar Contacto
-        </Button>
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={() => setOpened(true)}
-          size="md"
-          visibleFrom="sm"
-        >
-          Agregar Contacto
-        </Button>
+        <Group>
+          <ActionIcon
+            variant="light"
+            size="lg"
+            onClick={() => loadContacts()}
+            title="Recargar contactos"
+          >
+            <IconRefresh size={18} />
+          </ActionIcon>
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => setOpened(true)}
+            size="md"
+            hiddenFrom="sm"
+            fullWidth
+          >
+            Agregar Contacto
+          </Button>
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={() => setOpened(true)}
+            size="md"
+            visibleFrom="sm"
+          >
+            Agregar Contacto
+          </Button>
+        </Group>
       </Flex>
 
       {/* Stats Cards */}
@@ -337,79 +377,91 @@ export default function ContactosPage() {
       <Card shadow="sm" padding="lg" radius="md" withBorder>
         <Stack gap="md">
           <Title order={3}>Lista de Contactos</Title>
-          <Table>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Contacto</Table.Th>
-                <Table.Th>Empresa</Table.Th>
-                <Table.Th>Teléfono</Table.Th>
-                <Table.Th>Estado</Table.Th>
-                <Table.Th>Fecha de Creación</Table.Th>
-                <Table.Th>Acciones</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {filteredContacts.map((contact) => (
-                <Table.Tr key={contact.id}>
-                  <Table.Td>
-                    <Group gap="sm">
-                      <Avatar size="sm" color="blue">
-                        {contact.name.charAt(0)}
-                      </Avatar>
-                      <div>
-                        <Text size="sm" fw={500}>{contact.name}</Text>
-                        <Text size="xs" c="dimmed">{contact.email}</Text>
-                      </div>
-                    </Group>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{contact.company}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{contact.phone || "-"}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge color={getStatusColor(contact.status)} variant="light">
-                      {contact.status === "active" ? "Activo" : "Inactivo"}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" c="dimmed">
-                      {contact.created_at ? new Date(contact.created_at).toLocaleDateString('es-ES') : "-"}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs">
-                      <ActionIcon 
-                        variant="light" 
-                        color="blue"
-                        onClick={() => window.location.href = `/dashboard/programacion?contactId=${contact.id}`}
-                        title="Programar llamada"
-                      >
-                        <IconCalendar size={16} />
-                      </ActionIcon>
-                      <ActionIcon 
-                        variant="light" 
-                        color="gray"
-                        onClick={() => handleEditContact(contact)}
-                        title="Editar"
-                      >
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                      <ActionIcon 
-                        variant="light" 
-                        color="red"
-                        onClick={() => handleDeleteContact(contact.id)}
-                        title="Eliminar"
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    </Group>
-                  </Table.Td>
+          {filteredContacts.length === 0 ? (
+            <Center py="xl">
+              <Stack align="center" gap="sm">
+                <IconPlus size={48} stroke={1.5} color="gray" />
+                <Text c="dimmed">No hay contactos para mostrar</Text>
+                <Button onClick={() => setOpened(true)} leftSection={<IconPlus size={16} />}>
+                  Agregar primer contacto
+                </Button>
+              </Stack>
+            </Center>
+          ) : (
+            <Table>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Contacto</Table.Th>
+                  <Table.Th>Empresa</Table.Th>
+                  <Table.Th>Teléfono</Table.Th>
+                  <Table.Th>Estado</Table.Th>
+                  <Table.Th>Fecha de Creación</Table.Th>
+                  <Table.Th>Acciones</Table.Th>
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+              </Table.Thead>
+              <Table.Tbody>
+                {filteredContacts.map((contact) => (
+                  <Table.Tr key={contact.id}>
+                    <Table.Td>
+                      <Group gap="sm">
+                        <Avatar size="sm" color="blue">
+                          {contact.name.charAt(0)}
+                        </Avatar>
+                        <div>
+                          <Text size="sm" fw={500}>{contact.name}</Text>
+                          <Text size="xs" c="dimmed">{contact.email}</Text>
+                        </div>
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{contact.company || "-"}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm">{contact.phone || "-"}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge color={getStatusColor(contact.status)} variant="light">
+                        {contact.status === "active" ? "Activo" : "Inactivo"}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="sm" c="dimmed">
+                        {contact.created_at ? new Date(contact.created_at).toLocaleDateString('es-ES') : "-"}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <ActionIcon 
+                          variant="light" 
+                          color="blue"
+                          onClick={() => window.location.href = `/dashboard/programacion?contactId=${contact.id}`}
+                          title="Programar llamada"
+                        >
+                          <IconCalendar size={16} />
+                        </ActionIcon>
+                        <ActionIcon 
+                          variant="light" 
+                          color="gray"
+                          onClick={() => handleEditContact(contact)}
+                          title="Editar"
+                        >
+                          <IconEdit size={16} />
+                        </ActionIcon>
+                        <ActionIcon 
+                          variant="light" 
+                          color="red"
+                          onClick={() => handleDeleteContact(contact.id)}
+                          title="Eliminar"
+                        >
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          )}
         </Stack>
       </Card>
 

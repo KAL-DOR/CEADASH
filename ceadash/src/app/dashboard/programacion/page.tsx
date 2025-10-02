@@ -37,7 +37,6 @@ import {
 import { DateTimePicker } from "@mantine/dates";
 import { notifications } from "@mantine/notifications";
 import { useAuth } from "@/lib/auth/context";
-import { createClient } from "@/lib/supabase/client";
 import { sendSchedulingEmail, validateEmail } from "@/lib/email-service";
 
 interface ScheduledCall {
@@ -99,33 +98,12 @@ export default function ProgramacionPage() {
   const loadScheduledCalls = async () => {
     try {
       setLoading(true);
-      const supabase = createClient();
       
-      // Get scheduled calls with contact information
-      const { data: scheduledCalls, error } = await supabase
-        .from('scheduled_calls')
-        .select(`
-          *,
-          contacts (
-            name,
-            email,
-            phone
-          )
-        `)
-        .eq('organization_id', profile?.organization_id)
-        .order('scheduled_date', { ascending: false });
-
-      if (error) throw error;
-
-      // Format the data
-      const formattedCalls = (scheduledCalls || []).map((call: Record<string, unknown>) => ({
-        ...call,
-        contact_name: (call.contacts as Record<string, unknown>)?.name as string,
-        contact_email: (call.contacts as Record<string, unknown>)?.email as string,
-        contact_phone: (call.contacts as Record<string, unknown>)?.phone as string,
-      })) as ScheduledCall[];
-
-      setCalls(formattedCalls);
+      const response = await fetch(`/api/scheduled-calls?organization_id=${profile?.organization_id}`);
+      if (!response.ok) throw new Error('Failed to load scheduled calls');
+      
+      const data = await response.json();
+      setCalls(data || []);
     } catch (error) {
       console.error('Error loading scheduled calls:', error);
       notifications.show({
@@ -140,16 +118,16 @@ export default function ProgramacionPage() {
 
   const loadContacts = async () => {
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('contacts')
-        .select('id, name, email, phone')
-        .eq('organization_id', profile?.organization_id)
-        .eq('status', 'active')
-        .order('name');
-
-      if (error) throw error;
-      setContacts(data || []);
+      const response = await fetch(`/api/contacts?organization_id=${profile?.organization_id}`);
+      if (!response.ok) throw new Error('Failed to load contacts');
+      
+      const data = await response.json();
+      // Filter active contacts and sort by name
+      const activeContacts = (data || [])
+        .filter((c: any) => c.status === 'active')
+        .sort((a: any, b: any) => a.name.localeCompare(b.name));
+      
+      setContacts(activeContacts);
     } catch (error) {
       console.error('Error loading contacts:', error);
     }
@@ -177,8 +155,6 @@ export default function ProgramacionPage() {
     setIsScheduling(true);
 
     try {
-      const supabase = createClient();
-      
       // Get contact details
       const selectedContact = contacts.find(c => c.id === newCall.contactId);
       if (!selectedContact) {
@@ -218,35 +194,31 @@ export default function ProgramacionPage() {
 
       const botConnectionUrl = agentResult.agentLink || `https://elevenlabs.io/convai/conversation?agent_id=${agentResult.agentId}`;
 
-      // Create scheduled call in database
-      const { data: scheduledCall, error: dbError } = await supabase
-        .from('scheduled_calls')
-        .insert([
-          {
-            organization_id: profile?.organization_id,
-            contact_id: newCall.contactId,
-            scheduled_date: newCall.scheduledDate.toISOString(),
-            status: 'scheduled',
-            duration_minutes: newCall.duration,
-            notes: newCall.notes || null,
-            email_sent: false,
-            bot_connection_url: botConnectionUrl,
-            created_by: profile?.id,
-          }
-        ])
-        .select()
-        .single();
+      // Create scheduled call in database via API
+      const scheduledCallData = {
+        organization_id: profile?.organization_id,
+        contact_id: newCall.contactId,
+        scheduled_date: newCall.scheduledDate.toISOString(),
+        status: 'scheduled',
+        duration_minutes: newCall.duration,
+        notes: newCall.notes || null,
+        email_sent: false,
+        bot_connection_url: botConnectionUrl,
+        created_by: profile?.id,
+      };
 
-      if (dbError) throw dbError;
+      const createCallResponse = await fetch('/api/scheduled-calls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scheduledCallData),
+      });
 
-      // Get organization CC emails
-      const { data: orgData } = await supabase
-        .from('organizations')
-        .select('notification_cc_emails')
-        .eq('id', profile?.organization_id)
-        .single();
+      if (!createCallResponse.ok) {
+        const error = await createCallResponse.json();
+        throw new Error(error.error || 'Failed to create scheduled call');
+      }
 
-      const ccEmails = orgData?.notification_cc_emails || [];
+      const ccEmails: string[] = [];
 
       // Send email to contact via API route (server-side)
       try {
@@ -268,36 +240,9 @@ export default function ProgramacionPage() {
 
         const emailResult = await emailResponse.json();
 
-        // Update with email info
-        if (emailResult.success) {
-          await supabase
-            .from('scheduled_calls')
-            .update({
-              email_sent: true,
-              email_id: emailResult.emailId,
-            })
-            .eq('id', scheduledCall.id);
-        }
-
-        // Create activity entry
-        await supabase
-          .from('activities')
-          .insert({
-            organization_id: profile?.organization_id,
-            user_id: profile?.id,
-            activity_type: 'call_scheduled',
-            title: `Llamada programada con ${selectedContact.name}`,
-            description: `${newCall.processType} - ${new Date(newCall.scheduledDate).toLocaleDateString('es-ES')}`,
-            metadata: { 
-              scheduled_call_id: scheduledCall.id,
-              contact_id: newCall.contactId,
-              process_type: newCall.processType
-            }
-          });
-
         notifications.show({
           title: "¡Éxito!",
-          message: `Llamada programada y email enviado a ${selectedContact.name}`,
+          message: `Llamada programada${emailResult.success ? ' y email enviado' : ''} a ${selectedContact.name}`,
           color: "green",
         });
       } catch (emailError) {

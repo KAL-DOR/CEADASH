@@ -11,7 +11,6 @@ import {
   IconTrendingUp,
 } from "@tabler/icons-react";
 import { useAuth } from "@/lib/auth/context";
-import { createClient } from "@/lib/supabase/client";
 
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { ProcessEfficiencyChart } from "@/components/dashboard/process-efficiency-chart";
@@ -42,37 +41,12 @@ export default function DashboardPage() {
   const loadStats = async () => {
     try {
       setLoading(true);
-      const supabase = createClient();
-
-      // Load all stats in parallel
-      const [processesResult, callsResult, contactsResult] = await Promise.all([
-        supabase
-          .from('processes')
-          .select('efficiency_score')
-          .eq('organization_id', profile?.organization_id),
-        supabase
-          .from('scheduled_calls')
-          .select('id', { count: 'exact', head: true })
-          .eq('organization_id', profile?.organization_id)
-          .in('status', ['scheduled', 'in_progress']),
-        supabase
-          .from('contacts')
-          .select('id', { count: 'exact', head: true })
-          .eq('organization_id', profile?.organization_id)
-          .eq('status', 'active'),
-      ]);
-
-      const processes = processesResult.data || [];
-      const avgEfficiency = processes.length > 0
-        ? Math.round(processes.reduce((sum, p) => sum + (p.efficiency_score || 0), 0) / processes.length)
-        : 0;
-
-      setStats({
-        totalProcesses: processes.length,
-        scheduledCalls: callsResult.count || 0,
-        totalContacts: contactsResult.count || 0,
-        avgEfficiency,
-      });
+      
+      const response = await fetch(`/api/dashboard-stats?organization_id=${profile?.organization_id}`);
+      if (!response.ok) throw new Error('Failed to load stats');
+      
+      const data = await response.json();
+      setStats(data);
     } catch (error) {
       console.error('Error loading stats:', error);
     } finally {
