@@ -8,11 +8,6 @@ import {
   Stack,
   SimpleGrid,
   Flex,
-  Modal,
-  TextInput,
-  Textarea,
-  Select,
-  Group,
   Loader,
   Center,
 } from "@mantine/core";
@@ -390,109 +385,6 @@ export default function ProcesosPage() {
           ))}
         </SimpleGrid>
       )}
-
-      {/* Create Process Modal */}
-      <Modal
-        opened={opened}
-        onClose={() => setOpened(false)}
-        title="Crear Nuevo Proceso"
-        size="md"
-      >
-        <Stack gap="md">
-          <TextInput
-            label="Nombre del proceso"
-            placeholder="ej. Incorporación de empleados"
-            value={newProcess.name}
-            onChange={(e) => setNewProcess({ ...newProcess, name: e.target.value })}
-            required
-          />
-          <Textarea
-            label="Descripción"
-            placeholder="Describe el proceso..."
-            value={newProcess.description}
-            onChange={(e) => setNewProcess({ ...newProcess, description: e.target.value })}
-            rows={4}
-          />
-          <Select
-            label="Estado inicial"
-            data={[
-              { value: "draft", label: "Borrador" },
-              { value: "active", label: "Activo" },
-              { value: "archived", label: "Archivado" },
-            ]}
-            value={newProcess.status}
-            onChange={(value) => {
-              if (value === "draft") {
-                setNewProcess({ ...newProcess, status: "draft" });
-              } else if (value === "active") {
-                setNewProcess({ ...newProcess, status: "active" });
-              } else if (value === "archived") {
-                setNewProcess({ ...newProcess, status: "archived" });
-              }
-            }}
-          />
-          <Group justify="flex-end">
-            <Button variant="light" onClick={() => setOpened(false)} disabled={submitting}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreateProcess} loading={submitting}>
-              Crear Proceso
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-
-      {/* Import Transcription Modal */}
-      <Modal
-        opened={uploadOpened}
-        onClose={() => setUploadOpened(false)}
-        title="Importar Transcripción"
-        size="lg"
-      >
-        <Stack gap="md">
-          <Text size="sm" c="dimmed">
-            Importa una transcripción de llamada para crear un nuevo proceso. El sistema analizará el contenido y generará un diagrama automáticamente.
-          </Text>
-          <TextInput
-            label="Nombre del proceso"
-            placeholder="ej. Proceso de Ventas B2B"
-            value={uploadData.processName}
-            onChange={(e) => setUploadData({ ...uploadData, processName: e.target.value })}
-            required
-          />
-          <Select
-            label="Tipo de proceso"
-            placeholder="Selecciona el tipo"
-            data={[
-              { value: "ventas", label: "Ventas" },
-              { value: "onboarding", label: "Onboarding" },
-              { value: "soporte", label: "Soporte" },
-              { value: "produccion", label: "Producción" },
-              { value: "logistica", label: "Logística" },
-              { value: "otro", label: "Otro" },
-            ]}
-            value={uploadData.processType}
-            onChange={(value) => setUploadData({ ...uploadData, processType: value || "" })}
-            required
-          />
-          <Textarea
-            label="Transcripción"
-            placeholder="Pega aquí el texto de la transcripción..."
-            value={uploadData.transcriptionText}
-            onChange={(e) => setUploadData({ ...uploadData, transcriptionText: e.target.value })}
-            rows={10}
-            required
-          />
-          <Group justify="flex-end">
-            <Button variant="light" onClick={() => setUploadOpened(false)} disabled={submitting}>
-              Cancelar
-            </Button>
-            <Button onClick={handleImportTranscription} loading={submitting}>
-              Importar y Analizar
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
     </Stack>
   );
 }
