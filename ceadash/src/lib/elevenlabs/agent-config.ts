@@ -3,6 +3,8 @@
  * Dynamically updates agent instructions and behavior based on call setup
  */
 
+import { generateJuanPrompt, generateJuanFirstMessage } from './agent-prompt';
+
 export interface AgentConfiguration {
   agent_id?: string;
   name: string;
@@ -67,25 +69,32 @@ export class ElevenLabsAgentService {
    * Generate dynamic agent configuration based on call setup
    */
   generateAgentConfig(callData: CallSetupData): Partial<AgentConfiguration> {
-    const dynamicPrompt = this.generateDynamicPrompt(callData);
-    const firstMessage = this.generateFirstMessage(callData);
+    const dynamicPrompt = generateJuanPrompt({
+      contactName: callData.contactName,
+      contactEmail: callData.contactEmail,
+      processType: callData.processType,
+      contactCompany: callData.contactCompany,
+      duration: callData.duration,
+    });
+    
+    const firstMessage = generateJuanFirstMessage(callData.contactName);
     
     return {
-      name: `Agente CEA - ${callData.processType}`,
+      name: `CEA Interviewer Agent (${callData.contactName})`,
       conversation_config: {
         agent: {
           prompt: {
             prompt: dynamicPrompt,
-            llm: "gpt-4o-mini",
-            temperature: 0.3,
+            llm: "gemini-2.5-flash",
+            temperature: 0.7,
             max_tokens: 500,
             tool_ids: [],
           },
-          language: callData.language || 'es',
+          language: 'es',
           first_message: firstMessage,
         },
         tts: {
-          voice_id: "cjVigY5qzO86Huf0OWal", // Default Spanish voice
+          voice_id: "tomkxGQGz4b1kE0EM722", // Juan's voice
           model_id: "eleven_turbo_v2_5",
           stability: 0.5,
           similarity_boost: 0.8,
@@ -100,82 +109,6 @@ export class ElevenLabsAgentService {
         },
       },
     };
-  }
-
-  /**
-   * Generate first message for the agent
-   */
-  private generateFirstMessage(callData: CallSetupData): string {
-    return `¡Hola ${callData.contactName}! Soy el asistente virtual de la Comisión Estatal de Agua. Estoy aquí para conocer más sobre tu día a día y las operaciones de ${callData.processType}. ¿Tienes unos minutos para platicar?`;
-  }
-
-  /**
-   * Generate dynamic prompt based on call objectives and context
-   */
-  private generateDynamicPrompt(callData: CallSetupData): string {
-    const basePrompt = `Eres un asistente virtual de la Comisión Estatal de Agua (CEA) diseñado para entrevistar al personal y entender sus operaciones diarias.`;
-    
-    const contextPrompt = `
-CONTEXTO DE LA ENTREVISTA:
-- Contacto: ${callData.contactName} ${callData.contactCompany ? `de ${callData.contactCompany}` : 'de la CEA'}
-- Área/Proceso: ${callData.processType}
-- Duración estimada: ${callData.duration} minutos
-
-SOBRE LA CEA:
-La Comisión Estatal de Agua gestiona los recursos hídricos del estado, incluyendo agua potable, saneamiento, tratamiento de aguas residuales, mantenimiento de infraestructura, y atención ciudadana.
-
-OBJETIVOS DE LA ENTREVISTA:
-${callData.objectives.map(obj => `- ${obj}`).join('\n')}
-
-TU ROL:
-Eres un entrevistador profesional que busca entender las operaciones diarias del personal de la CEA. Tu objetivo es documentar:
-1. Cómo trabajan día a día
-2. Qué tareas realizan regularmente
-3. Qué herramientas o sistemas utilizan
-4. Qué desafíos enfrentan
-5. Cómo se coordinan con otras áreas
-
-INSTRUCCIONES DE ENTREVISTA:
-1. Saluda cordialmente y explica que quieres conocer su trabajo diario
-2. Pregunta sobre ${callData.processType} de manera conversacional
-3. Enfócate en entender:
-   - Tareas y actividades diarias
-   - Frecuencia de las actividades (diario, semanal, mensual)
-   - Herramientas, sistemas o equipos que utilizan
-   - Personas con quienes interactúan (otros departamentos, ciudadanos, proveedores)
-   - Herramientas y sistemas utilizados
-   - Puntos de dolor y ineficiencias
-   - Tiempo promedio del proceso
-   - Frecuencia de ejecución
-
-   - Desafíos o problemas que enfrentan
-   - Sugerencias de mejora desde su perspectiva
-4. Haz preguntas de seguimiento para profundizar en detalles
-5. Mantén un tono profesional pero cercano y conversacional
-6. Al final, agradece su tiempo y menciona que la información ayudará a mejorar las operaciones de la CEA
-
-${callData.specificQuestions && callData.specificQuestions.length > 0 ? `
-PREGUNTAS CLAVE A CUBRIR:
-${callData.specificQuestions.map(q => `- ${q}`).join('\n')}
-` : ''}
-
-ESTILO DE CONVERSACIÓN:
-- Habla en español de forma natural y coloquial
-- Usa "tú" en lugar de "usted" para ser más cercano
-- Evita jerga técnica innecesaria
-- Muestra genuino interés en su trabajo
-- Haz una pregunta a la vez y escucha activamente
-- Resume periódicamente para confirmar que entendiste correctamente
-
-IMPORTANTE: 
-- Esta es una entrevista para mejorar las operaciones de la CEA
-- El objetivo NO es vender nada ni proponer soluciones inmediatas
-- Enfócate en entender profundamente cómo trabajan actualmente
-- Captura detalles específicos y ejemplos concretos
-- Al finalizar, agradece y menciona que su input es muy valioso
-`;
-
-    return basePrompt + contextPrompt;
   }
 
   /**
