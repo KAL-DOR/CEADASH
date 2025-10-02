@@ -228,7 +228,7 @@ export default function ProgramacionPage() {
           body: JSON.stringify({
             to: selectedContact.email,
             scheduledCall: {
-              id: scheduledCallData.id || 'new',
+              id: 'new',
               contact_name: selectedContact.name,
               contact_email: selectedContact.email,
               scheduled_date: newCall.scheduledDate.toISOString(),
