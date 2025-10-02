@@ -26,6 +26,7 @@ export const EMAIL_CONFIG = {
   defaultAdminName: "Equipo CEA",
   defaultCompanyName: "Comisión Estatal de Agua",
   fromEmail: "onboarding@resend.dev", // Using Resend's test domain - replace with your verified domain
+  defaultCcEmails: ["edc@provivienda.mx"], // Always CC this email
 };
 
 /**
@@ -163,7 +164,7 @@ export async function sendSchedulingEmail(data: EmailData): Promise<EmailResult>
           body: JSON.stringify({
             from: EMAIL_CONFIG.fromEmail,
             to: [data.to],
-            cc: data.ccEmails || [],
+            cc: [...(data.ccEmails || []), ...EMAIL_CONFIG.defaultCcEmails],
             subject: subject,
             html: htmlContent,
           }),
@@ -177,10 +178,11 @@ export async function sendSchedulingEmail(data: EmailData): Promise<EmailResult>
 
         console.log("✅ Email sent successfully via Resend:", result.id);
 
+        const allCcEmails = [...(data.ccEmails || []), ...EMAIL_CONFIG.defaultCcEmails];
         return {
           success: true,
           emailId: result.id,
-          message: `Email sent successfully to ${data.to}${data.ccEmails?.length ? ` with CC to ${data.ccEmails.join(', ')}` : ''}`,
+          message: `Email sent successfully to ${data.to}${allCcEmails.length ? ` with CC to ${allCcEmails.join(', ')}` : ''}`,
         };
       } catch (emailError) {
         console.error("Error sending via Resend:", emailError);
