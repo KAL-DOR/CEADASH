@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Title,
   Text,
@@ -19,6 +19,7 @@ import {
   FileInput,
   NumberInput,
   Tabs,
+  Alert,
 } from "@mantine/core";
 import {
   IconUser,
@@ -31,9 +32,16 @@ import {
   IconUpload,
   IconSettings,
   IconPalette,
+  IconCheck,
+  IconAlertCircle,
 } from "@tabler/icons-react";
+import { useAuth } from "@/lib/auth/context";
+import { notifications as mantineNotifications } from "@mantine/notifications";
 
 export default function ConfiguracionPage() {
+  const { profile: userProfile, organization } = useAuth();
+  const [loading, setLoading] = useState(false);
+  
   const [profile, setProfile] = useState({
     name: "Usuario Demo",
     email: "usuario@empresa.com",
@@ -41,6 +49,10 @@ export default function ConfiguracionPage() {
     company: "Mi Empresa",
     position: "Administrador",
     bio: "Especialista en optimización de procesos empresariales",
+  });
+
+  const [emailSettings, setEmailSettings] = useState({
+    ccEmail: "",
   });
 
   const [notifications, setNotifications] = useState({
@@ -65,6 +77,63 @@ export default function ConfiguracionPage() {
     passwordExpiry: 90,
   });
 
+  // Load organization settings on mount
+  useEffect(() => {
+    const loadOrgSettings = async () => {
+      if (!organization?.id) return;
+      
+      try {
+        const response = await fetch(`/api/organizations?id=${organization.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.cc_email) {
+            setEmailSettings({ ccEmail: data.cc_email });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading organization settings:', error);
+      }
+    };
+
+    loadOrgSettings();
+  }, [organization?.id]);
+
+  const handleSaveEmailSettings = async () => {
+    if (!organization?.id) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch('/api/organizations', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: organization.id,
+          cc_email: emailSettings.ccEmail,
+        }),
+      });
+
+      if (response.ok) {
+        mantineNotifications.show({
+          title: '¡Éxito!',
+          message: 'Configuración de email guardada correctamente',
+          color: 'green',
+          icon: <IconCheck size={16} />,
+        });
+      } else {
+        throw new Error('Failed to save');
+      }
+    } catch (error) {
+      mantineNotifications.show({
+        title: 'Error',
+        message: 'No se pudo guardar la configuración',
+        color: 'red',
+        icon: <IconAlertCircle size={16} />,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Stack gap="xl">
       {/* Header */}
@@ -73,8 +142,11 @@ export default function ConfiguracionPage() {
         <Text c="dimmed">Gestiona tu perfil, preferencias y configuración del sistema</Text>
       </div>
 
-      <Tabs defaultValue="profile" orientation="horizontal">
+      <Tabs defaultValue="email" orientation="horizontal">
         <Tabs.List>
+          <Tabs.Tab value="email" leftSection={<IconMail size={16} />}>
+            Email
+          </Tabs.Tab>
           <Tabs.Tab value="profile" leftSection={<IconUser size={16} />}>
             Perfil
           </Tabs.Tab>
@@ -88,6 +160,45 @@ export default function ConfiguracionPage() {
             Seguridad
           </Tabs.Tab>
         </Tabs.List>
+
+        {/* Email Tab */}
+        <Tabs.Panel value="email" pt="lg">
+          <Card shadow="sm" padding="lg" radius="md" withBorder>
+            <Stack gap="md">
+              <Title order={4}>Configuración de Email</Title>
+              
+              <Alert icon={<IconMail size={16} />} color="blue" variant="light">
+                Todos los emails de llamadas programadas incluirán una copia (CC) a este correo electrónico
+              </Alert>
+              
+              <TextInput
+                label="Email para CC (Copia)"
+                placeholder="tu-email@empresa.com"
+                description="Este email recibirá una copia de todas las notificaciones de llamadas programadas"
+                leftSection={<IconMail size={16} />}
+                value={emailSettings.ccEmail}
+                onChange={(e) => setEmailSettings({ ccEmail: e.target.value })}
+                type="email"
+              />
+              
+              <Group justify="flex-end" mt="lg">
+                <Button 
+                  variant="light"
+                  onClick={() => setEmailSettings({ ccEmail: "" })}
+                >
+                  Limpiar
+                </Button>
+                <Button 
+                  onClick={handleSaveEmailSettings}
+                  loading={loading}
+                  leftSection={<IconCheck size={16} />}
+                >
+                  Guardar Email
+                </Button>
+              </Group>
+            </Stack>
+          </Card>
+        </Tabs.Panel>
 
         {/* Profile Tab */}
         <Tabs.Panel value="profile" pt="lg">

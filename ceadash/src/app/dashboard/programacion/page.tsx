@@ -218,32 +218,38 @@ export default function ProgramacionPage() {
         throw new Error(error.error || 'Failed to create scheduled call');
       }
 
-      const ccEmails: string[] = [];
-
-      // Send email to contact via Gmail (EmailJS)
+      // Load organization CC email
+      let ccEmail = '';
       try {
-        const emailResponse = await fetch('/api/send-email-gmail', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: selectedContact.email,
-            scheduledCall: {
-              id: 'new',
-              contact_name: selectedContact.name,
-              contact_email: selectedContact.email,
-              scheduled_date: newCall.scheduledDate.toISOString(),
-              notes: newCall.notes,
-              bot_connection_url: botConnectionUrl,
-            },
-            additionalCCs: ccEmails,
-          }),
-        });
+        const orgResponse = await fetch(`/api/organizations?id=${profile?.organization_id}`);
+        if (orgResponse.ok) {
+          const orgData = await orgResponse.json();
+          ccEmail = orgData.cc_email || '';
+        }
+      } catch (error) {
+        console.error('Failed to load org settings:', error);
+      }
 
-        const emailResult = await emailResponse.json();
+      // Send email to contact via Gmail (EmailJS) - CLIENT-SIDE
+      try {
+        const { sendSchedulingEmailViaGmail } = await import('@/lib/emailjs-service');
+        
+        const emailResult = await sendSchedulingEmailViaGmail(
+          selectedContact.email,
+          {
+            id: 'new',
+            contact_name: selectedContact.name,
+            contact_email: selectedContact.email,
+            scheduled_date: newCall.scheduledDate.toISOString(),
+            notes: newCall.notes,
+            bot_connection_url: botConnectionUrl,
+          },
+          ccEmail
+        );
 
         notifications.show({
           title: "¡Éxito!",
-          message: `Llamada programada${emailResult.success ? ' y email enviado desde tu Gmail' : ''} a ${selectedContact.name}`,
+          message: `Llamada programada${emailResult.success ? ' y email enviado desde tu Gmail' : ''} a ${selectedContact.name}${ccEmail ? ` (CC: ${ccEmail})` : ''}`,
           color: "green",
         });
       } catch (emailError) {

@@ -1,5 +1,6 @@
-// EmailJS Email Service
+// EmailJS Email Service (CLIENT-SIDE ONLY)
 // Sends emails through your Gmail account
+// Must be called from browser, not server
 import emailjs from '@emailjs/browser';
 
 export interface ScheduledCallEmailData {
@@ -13,13 +14,19 @@ export interface ScheduledCallEmailData {
 
 /**
  * Send a scheduled call notification email via EmailJS (through your Gmail)
+ * ⚠️ MUST be called from client-side code only (browser environment)
  */
 export async function sendSchedulingEmailViaGmail(
   to: string,
   scheduledCall: ScheduledCallEmailData,
-  additionalCCs?: string[]
+  ccEmail?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
+    // Check if running in browser
+    if (typeof window === 'undefined') {
+      throw new Error('EmailJS must be called from client-side (browser) only');
+    }
+
     const serviceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
     const templateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID;
     const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
@@ -48,14 +55,15 @@ export async function sendSchedulingEmailViaGmail(
       scheduled_date: formattedDate,
       notes: scheduledCall.notes || 'Sin notas adicionales',
       bot_url: scheduledCall.bot_connection_url || 'El link será enviado pronto',
-      // Add CCs if provided
-      cc_emails: additionalCCs?.join(', ') || ''
+      // Add CC if provided
+      cc_emails: ccEmail || ''
     };
 
     console.log('📧 Sending email via EmailJS/Gmail:', {
       to,
       contact: scheduledCall.contact_name,
       scheduled: formattedDate,
+      cc: ccEmail,
     });
 
     // Send email using EmailJS
