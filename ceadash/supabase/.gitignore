@@ -1,0 +1,8 @@
+# Supabase local development files
+.branches
+.temp
+functions/.env
+
+# Supabase CLI config (contains sensitive project refs)
+.supabase/
+

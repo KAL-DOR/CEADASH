@@ -204,12 +204,18 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Sample data (optional - remove in production)
--- This creates a demo organization and user for testing
+-- Grant necessary permissions
+-- Allow authenticated users to insert into their own organization's tables
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
+
+-- Sample data for demo (optional - remove in production)
+-- This creates a demo organization for testing
 DO $$
 DECLARE
     demo_org_id UUID;
-    demo_user_id UUID;
 BEGIN
     -- Create demo organization
     INSERT INTO organizations (name, slug) 
@@ -218,5 +224,9 @@ BEGIN
     
     -- Note: In real usage, profiles are created via the trigger when users sign up
     -- This is just for demo purposes if you want to test without full auth
+EXCEPTION
+    WHEN unique_violation THEN
+        -- Demo org already exists, skip
+        NULL;
 END $$;
 
