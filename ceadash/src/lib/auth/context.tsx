@@ -41,10 +41,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsDemoMode(isDemo);
       
       if (isDemo) {
-        // Set demo profile data
+        // Set demo profile data with proper UUIDs
+        const demoOrgId = '00000000-0000-0000-0000-000000000001';
+        const demoUserId = '00000000-0000-0000-0000-000000000002';
+        
         setProfile({
-          id: 'demo-user',
-          organization_id: 'demo-org',
+          id: demoUserId,
+          organization_id: demoOrgId,
           email: 'demo@ceadashboard.com',
           full_name: 'Usuario Demo',
           avatar_url: null,
@@ -53,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updated_at: new Date().toISOString(),
         });
         setOrganization({
-          id: 'demo-org',
+          id: demoOrgId,
           name: 'Organización Demo',
           slug: 'demo-org',
           created_at: new Date().toISOString(),
