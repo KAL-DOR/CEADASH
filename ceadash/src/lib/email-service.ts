@@ -23,8 +23,8 @@ export interface EmailResult {
 
 export const EMAIL_CONFIG = {
   defaultAdminName: "Equipo CEA",
-  defaultCompanyName: "Centro de Excelencia en Automatización",
-  fromEmail: "noreply@cea-automation.com",
+  defaultCompanyName: "Comisión Estatal de Agua",
+  fromEmail: "noreply@cea.gob.mx",
 };
 
 /**
@@ -174,7 +174,7 @@ function generateEmailTemplate(data: EmailData): string {
 
         <p>Hola <strong>${data.contactName}</strong>,</p>
         
-        <p>Tu llamada para el mapeo de procesos con nuestro asistente de IA ha sido programada exitosamente. Nuestro agente especializado te ayudará a documentar y optimizar tu proceso de <strong>${processTypeLabel}</strong>.</p>
+        <p>La Comisión Estatal de Agua (CEA) te ha programado una entrevista con nuestro asistente virtual para conocer más sobre tus operaciones diarias en <strong>${processTypeLabel}</strong>. El objetivo es entender mejor cómo trabajas y qué podemos hacer para apoyarte.</p>
 
         <div class="details">
             <div class="detail-item">
@@ -200,14 +200,15 @@ function generateEmailTemplate(data: EmailData): string {
         </div>
 
         <div class="agent-info">
-            <h3>🤖 Agente de IA Configurado</h3>
-            <p>Hemos configurado un agente de IA especializado específicamente para tu tipo de proceso. El agente:</p>
+            <h3>🤖 Asistente Virtual de la CEA</h3>
+            <p>Hemos configurado un asistente virtual especializado para entrevistar al personal de la CEA. El asistente:</p>
             <ul>
-                <li>Está entrenado en mapeo de procesos de ${processTypeLabel}</li>
-                <li>Hará preguntas específicas para tu industria</li>
-                <li>Documentará cada paso del proceso en detalle</li>
-                <li>Identificará oportunidades de mejora automáticamente</li>
+                <li>Te hará preguntas sobre tu trabajo diario en ${processTypeLabel}</li>
+                <li>Escuchará tus experiencias y desafíos</li>
+                <li>Documentará tus actividades y procesos</li>
+                <li>Identificará áreas de oportunidad desde tu perspectiva</li>
             </ul>
+            <p><strong>Recuerda:</strong> Esta es una entrevista confidencial para mejorar las operaciones de la CEA. Tu feedback es muy valioso.</p>
         </div>
 
         <div style="text-align: center;">
@@ -217,23 +218,24 @@ function generateEmailTemplate(data: EmailData): string {
         </div>
 
         <div class="instructions">
-            <h3>📋 Instrucciones para la llamada:</h3>
+            <h3>📋 Cómo conectarte:</h3>
             <ol>
                 <li><strong>Haz clic en el botón de arriba</strong> a la hora programada</li>
                 <li><strong>Permite el acceso al micrófono</strong> cuando el navegador lo solicite</li>
-                <li><strong>Habla claramente</strong> sobre tu proceso actual</li>
-                <li><strong>Sé específico</strong> sobre los pasos, herramientas y personas involucradas</li>
-                <li><strong>Menciona los puntos de dolor</strong> o ineficiencias que observes</li>
+                <li><strong>Habla naturalmente</strong> sobre tu trabajo diario</li>
+                <li><strong>Sé específico</strong> sobre las tareas que realizas, herramientas que usas, y con quién trabajas</li>
+                <li><strong>Comparte tus experiencias</strong> - tanto lo que funciona bien como los desafíos</li>
             </ol>
         </div>
 
         <div class="instructions">
-            <h3>💡 Consejos para una sesión exitosa:</h3>
+            <h3>💡 Qué puedes compartir:</h3>
             <ul>
-                <li>Ten a mano documentación relevante del proceso</li>
-                <li>Prepara ejemplos específicos de cómo funciona actualmente</li>
-                <li>Piensa en los principales desafíos que enfrentas</li>
-                <li>Considera qué herramientas o sistemas utilizas</li>
+                <li>Tus actividades diarias, semanales o mensuales</li>
+                <li>Herramientas, sistemas o equipos que utilizas</li>
+                <li>Desafíos o problemas que enfrentas en tu trabajo</li>
+                <li>Coordinación con otros departamentos o áreas</li>
+                <li>Sugerencias o ideas de mejora</li>
             </ul>
         </div>
 
@@ -241,7 +243,7 @@ function generateEmailTemplate(data: EmailData): string {
 
         <div class="footer">
             <p>Este email fue enviado por ${data.companyName}</p>
-            <p>Sistema de automatización de procesos empresariales</p>
+            <p>Sistema de entrevistas para mejora de operaciones</p>
         </div>
     </div>
 </body>
@@ -253,19 +255,27 @@ function generateEmailTemplate(data: EmailData): string {
  */
 function getProcessTypeLabel(processType: string): string {
   const labels: Record<string, string> = {
-    "onboarding": "Incorporación de empleados",
-    "ventas": "Proceso de ventas",
-    "soporte": "Atención al cliente",
-    "manufactura": "Proceso de manufactura",
-    "compras": "Proceso de compras",
-    "rrhh": "Recursos humanos",
-    "finanzas": "Procesos financieros",
-    "marketing": "Marketing y publicidad",
-    "logistica": "Logística y distribución",
-    "otro": "Proceso personalizado",
+    "agua_potable": "Gestión de Agua Potable",
+    "saneamiento": "Saneamiento y Alcantarillado",
+    "tratamiento": "Tratamiento de Aguas Residuales",
+    "mantenimiento": "Mantenimiento de Infraestructura",
+    "atencion_ciudadana": "Atención Ciudadana",
+    "facturacion": "Facturación y Cobranza",
+    "operacion": "Operación de Sistemas",
+    "calidad_agua": "Control de Calidad del Agua",
+    "medicion": "Medición y Macromedición",
+    "fugas": "Detección y Reparación de Fugas",
+    "rrhh": "Recursos Humanos",
+    "administracion": "Administración General",
+    "compras": "Adquisiciones y Compras",
+    "almacen": "Almacén e Inventarios",
+    "finanzas": "Finanzas y Contabilidad",
+    "juridico": "Área Jurídica",
+    "planeacion": "Planeación y Proyectos",
+    "otro": "Otras operaciones",
   };
   
-  return labels[processType] || "Proceso empresarial";
+  return labels[processType] || "Operaciones de la CEA";
 }
 
 /**
