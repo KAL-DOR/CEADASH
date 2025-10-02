@@ -244,19 +244,25 @@ export default function ProgramacionPage() {
 
       const ccEmails = orgData?.notification_cc_emails || [];
 
-      // Send email to contact
+      // Send email to contact via API route (server-side)
       try {
-        const emailResult = await sendSchedulingEmail({
-          to: selectedContact.email,
-          contactName: selectedContact.name,
-          scheduledDate: newCall.scheduledDate,
-          adminName: profile?.full_name || "Equipo CEA",
-          companyName: "CEA Dashboard",
-          botConnectionUrl: botConnectionUrl,
-          processType: newCall.processType,
-          duration: newCall.duration,
-          ccEmails: ccEmails,
+        const emailResponse = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: selectedContact.email,
+            contactName: selectedContact.name,
+            scheduledDate: newCall.scheduledDate.toISOString(),
+            adminName: profile?.full_name || "Equipo CEA",
+            companyName: "CEA Dashboard",
+            botConnectionUrl: botConnectionUrl,
+            processType: newCall.processType,
+            duration: newCall.duration,
+            ccEmails: ccEmails,
+          }),
         });
+
+        const emailResult = await emailResponse.json();
 
         // Update with email info
         if (emailResult.success) {

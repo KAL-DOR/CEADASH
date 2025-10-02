@@ -304,15 +304,14 @@ IMPORTANTE:
         }
       }
       
-      // If signed URL doesn't work, construct the widget embed URL
-      // This is the public-facing URL for the agent
-      const widgetUrl = `https://elevenlabs.io/app/conversational-ai/${agentId}`;
-      console.log('📎 Using widget URL:', widgetUrl);
-      return widgetUrl;
+      // If signed URL doesn't work, use the correct talk-to URL format
+      const talkToUrl = `https://elevenlabs.io/app/talk-to?agent_id=${agentId}`;
+      console.log('📎 Using talk-to URL:', talkToUrl);
+      return talkToUrl;
     } catch (error) {
       console.error('Error getting agent link:', error);
-      // Fallback to agent dashboard URL
-      return `https://elevenlabs.io/app/conversational-ai/${agentId}`;
+      // Fallback to talk-to URL
+      return `https://elevenlabs.io/app/talk-to?agent_id=${agentId}`;
     }
   }
 
