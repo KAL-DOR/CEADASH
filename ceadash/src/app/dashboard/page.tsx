@@ -31,7 +31,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (profile?.organization_id) {
+      console.log('📊 Loading dashboard stats for org:', profile.organization_id);
       loadStats();
+    } else {
+      console.log('⏳ Waiting for profile...', { profile });
+      setLoading(false); // Don't get stuck if profile isn't loaded
     }
   }, [profile?.organization_id]);
 

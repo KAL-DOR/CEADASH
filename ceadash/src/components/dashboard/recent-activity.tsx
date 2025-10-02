@@ -22,8 +22,12 @@ export function RecentActivity() {
 
   useEffect(() => {
     if (profile?.organization_id) {
+      console.log('📋 Loading activities for org:', profile.organization_id);
       loadActivities();
       subscribeToActivities();
+    } else {
+      console.log('⏳ RecentActivity waiting for profile...', { profile });
+      setLoading(false); // Don't get stuck if profile isn't loaded
     }
   }, [profile?.organization_id]);
 
