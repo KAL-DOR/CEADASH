@@ -1,6 +1,4 @@
 
-DROP TABLE IF EXISTS public.transcriptions CASCADE;
-DROP TABLE IF EXISTS public.scheduled_calls CASCADE;
 DROP TABLE IF EXISTS public.processes CASCADE;
 DROP TABLE IF EXISTS public.contacts CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
