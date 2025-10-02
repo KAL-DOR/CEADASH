@@ -40,31 +40,12 @@ interface Process {
 
 export default function ProcesosPage() {
   const { profile } = useAuth();
-  const [opened, setOpened] = useState(false);
-  const [uploadOpened, setUploadOpened] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [sortBy, setSortBy] = useState("fecha");
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   
   const [processes, setProcesses] = useState<Process[]>([]);
-  
-  const [newProcess, setNewProcess] = useState<{
-    name: string;
-    description: string;
-    status: "draft" | "active" | "archived";
-  }>({
-    name: "",
-    description: "",
-    status: "draft",
-  });
-
-  const [uploadData, setUploadData] = useState({
-    transcriptionText: "",
-    processName: "",
-    processType: "",
-  });
 
   // Load processes from Supabase
   useEffect(() => {
@@ -339,7 +320,7 @@ export default function ProcesosPage() {
         <Group>
           <Button
             leftSection={<IconUpload size={16} />}
-            onClick={() => setUploadOpened(true)}
+            onClick={() => window.open('https://tools.fitcluv.com/form/19083649-234c-4815-9903-7864a61f6884', '_blank')}
             variant="light"
             size="md"
           >
@@ -347,7 +328,7 @@ export default function ProcesosPage() {
           </Button>
           <Button
             leftSection={<IconPlus size={16} />}
-            onClick={() => setOpened(true)}
+            onClick={() => window.open('https://tools.fitcluv.com/form/aa6a028e-8e5b-463e-bc2b-6d6d760927f5', '_blank')}
             size="md"
             hiddenFrom="sm"
             fullWidth
@@ -356,7 +337,7 @@ export default function ProcesosPage() {
           </Button>
           <Button
             leftSection={<IconPlus size={16} />}
-            onClick={() => setOpened(true)}
+            onClick={() => window.open('https://tools.fitcluv.com/form/aa6a028e-8e5b-463e-bc2b-6d6d760927f5', '_blank')}
             size="md"
             visibleFrom="sm"
           >
