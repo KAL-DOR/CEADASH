@@ -1,8 +1,4 @@
--- Quick SQL to add notifications_cc_emails column to organizations table
--- Run this in your Supabase SQL Editor
 
--- Add the column
-ALTER TABLE public.organizations
 ADD COLUMN IF NOT EXISTS notifications_cc_emails TEXT;
 
 -- Add comment
