@@ -224,7 +224,7 @@ export default function ProgramacionPage() {
         const orgResponse = await fetch(`/api/organizations?id=${profile?.organization_id}`);
         if (orgResponse.ok) {
           const orgData = await orgResponse.json();
-          ccEmail = orgData.cc_email || '';
+          ccEmail = orgData.notifications_cc_emails || '';
         }
       } catch (error) {
         console.error('Failed to load org settings:', error);
