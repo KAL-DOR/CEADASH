@@ -47,7 +47,7 @@ export async function sendSchedulingEmailViaGmail(
       timeZone: 'America/Mexico_City'
     });
 
-    // Prepare template parameters
+    // Prepare template parameters for main email
     const templateParams = {
       to_email: to,
       contact_name: scheduledCall.contact_name,
@@ -55,8 +55,6 @@ export async function sendSchedulingEmailViaGmail(
       scheduled_date: formattedDate,
       notes: scheduledCall.notes || 'Sin notas adicionales',
       bot_url: scheduledCall.bot_connection_url || 'El link será enviado pronto',
-      // Add CC if provided
-      cc_emails: ccEmail || ''
     };
 
     console.log('📧 Sending email via EmailJS/Gmail:', {
@@ -66,7 +64,7 @@ export async function sendSchedulingEmailViaGmail(
       cc: ccEmail,
     });
 
-    // Send email using EmailJS
+    // Send main email to contact
     const response = await emailjs.send(
       serviceId,
       templateId,
@@ -74,7 +72,28 @@ export async function sendSchedulingEmailViaGmail(
       publicKey
     );
 
-    console.log('✅ Email sent successfully via Gmail:', response);
+    console.log('✅ Email sent to contact:', response);
+
+    // Send CC email if provided
+    if (ccEmail && ccEmail.trim()) {
+      const ccTemplateParams = {
+        ...templateParams,
+        to_email: ccEmail,
+      };
+      
+      try {
+        const ccResponse = await emailjs.send(
+          serviceId,
+          templateId,
+          ccTemplateParams,
+          publicKey
+        );
+        console.log('✅ CC email sent to:', ccEmail, ccResponse);
+      } catch (ccError) {
+        console.error('⚠️ Failed to send CC email (non-fatal):', ccError);
+        // Don't fail the whole operation if CC fails
+      }
+    }
 
     return {
       success: true,
