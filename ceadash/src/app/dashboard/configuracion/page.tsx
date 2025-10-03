@@ -86,8 +86,8 @@ export default function ConfiguracionPage() {
         const response = await fetch(`/api/organizations?id=${organization.id}`);
         if (response.ok) {
           const data = await response.json();
-          if (data.notifications_cc_emails) {
-            setEmailSettings({ ccEmail: data.notifications_cc_emails });
+          if (data.notification_cc_emails && data.notification_cc_emails.length > 0) {
+            setEmailSettings({ ccEmail: data.notification_cc_emails[0] });
           }
         }
       } catch (error) {
