@@ -225,6 +225,8 @@ export default function ProgramacionPage() {
         if (orgResponse.ok) {
           const orgData = await orgResponse.json();
           ccEmail = orgData.notification_cc_emails?.[0] || '';
+          console.log('📧 Loaded CC email from org settings:', ccEmail);
+          console.log('📧 Full org data:', orgData);
         }
       } catch (error) {
         console.error('Failed to load org settings:', error);
@@ -232,6 +234,11 @@ export default function ProgramacionPage() {
 
       // Send email to contact via Gmail (EmailJS) - CLIENT-SIDE
       try {
+        console.log('📧 About to send emails to:', {
+          contact: selectedContact.email,
+          cc: ccEmail,
+        });
+        
         const { sendSchedulingEmailViaGmail } = await import('@/lib/emailjs-service');
         
         const emailResult = await sendSchedulingEmailViaGmail(
@@ -246,6 +253,8 @@ export default function ProgramacionPage() {
           },
           ccEmail
         );
+        
+        console.log('📧 Email result:', emailResult);
 
         notifications.show({
           title: "¡Éxito!",
