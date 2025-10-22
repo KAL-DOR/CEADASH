@@ -77,7 +77,7 @@ export default function ProgramacionPage() {
     scheduledDate: new Date(),
     notes: "",
     processType: "",
-    industry: "",
+    area: "",
     objectives: [] as string[],
     duration: 30,
     specificQuestions: [] as string[],
@@ -143,10 +143,10 @@ export default function ProgramacionPage() {
       return;
     }
 
-    if (!newCall.processType || !newCall.industry) {
+    if (!newCall.processType || !newCall.area) {
       notifications.show({
         title: "Campos requeridos",
-        message: "Por favor, completa el tipo de proceso e industria",
+        message: "Por favor, completa el tipo de proceso y área",
         color: "red",
       });
       return;
@@ -170,7 +170,7 @@ export default function ProgramacionPage() {
         objectives: newCall.objectives,
         duration: newCall.duration,
         language: "es",
-        industry: newCall.industry,
+        industry: newCall.area,
         specificQuestions: newCall.specificQuestions,
       };
 
@@ -276,7 +276,7 @@ export default function ProgramacionPage() {
         scheduledDate: new Date(),
         notes: "",
         processType: "",
-        industry: "",
+        area: "",
         objectives: [],
         duration: 30,
         specificQuestions: [],
@@ -548,12 +548,12 @@ export default function ProgramacionPage() {
             label="Tipo de Proceso"
             placeholder="Selecciona el tipo"
             data={[
-              { value: "ventas", label: "Proceso de Ventas" },
-              { value: "onboarding", label: "Onboarding de Clientes" },
-              { value: "soporte", label: "Soporte Técnico" },
-              { value: "produccion", label: "Producción" },
-              { value: "logistica", label: "Logística" },
-              { value: "otro", label: "Otro" },
+              { value: "operativo", label: "Operativo" },
+              { value: "administrativo", label: "Administrativo" },
+              { value: "normativo", label: "Normativo" },
+              { value: "legal", label: "Legal" },
+              { value: "tecnologico", label: "Tecnológico" },
+              { value: "tramite", label: "Trámite" },
             ]}
             value={newCall.processType}
             onChange={(value) => setNewCall({ ...newCall, processType: value || "" })}
@@ -561,19 +561,20 @@ export default function ProgramacionPage() {
           />
 
           <Select
-            label="Industria"
-            placeholder="Selecciona la industria"
+            label="Área"
+            placeholder="Selecciona el área"
             data={[
-              { value: "tecnologia", label: "Tecnología" },
-              { value: "servicios", label: "Servicios" },
-              { value: "manufactura", label: "Manufactura" },
-              { value: "retail", label: "Retail" },
-              { value: "salud", label: "Salud" },
-              { value: "educacion", label: "Educación" },
-              { value: "otro", label: "Otro" },
+              { value: "juridico", label: "Jurídico" },
+              { value: "comercial", label: "Comercial" },
+              { value: "finanzas", label: "Finanzas" },
+              { value: "operacion-tecnica", label: "Operación Técnica" },
+              { value: "saneamiento", label: "Saneamiento" },
+              { value: "oic", label: "OIC" },
+              { value: "tic", label: "TIC" },
+              { value: "planeacion", label: "Planeación" },
             ]}
-            value={newCall.industry}
-            onChange={(value) => setNewCall({ ...newCall, industry: value || "" })}
+            value={newCall.area}
+            onChange={(value) => setNewCall({ ...newCall, area: value || "" })}
             required
           />
 
